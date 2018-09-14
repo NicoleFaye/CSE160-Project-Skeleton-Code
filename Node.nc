@@ -51,7 +51,28 @@ implementation{
       dbg(GENERAL_CHANNEL, "Packet Received\n");
       if(len==sizeof(pack)){
          pack* myMsg=(pack*) payload;
-         dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
+		if(myMsg->dest == TOS_NODE_ID){ //Checks to see if the current node is the destination of the packet
+			dbg(FLOODING_CHANNEL, "Packet has reached the destination: this = %d, dest = %d\n", TOS_NODE_ID, myMsg->dest);	
+			dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload); //Submit the payload to the general channel
+			return msg;
+		}
+		else if(myMsg->src == TOS_NODE_ID){ //Checks to see if the current node is the source node of the packet
+			dbg(FLOODING_CHANNEL, "Packet has returned to the source: remaining TTL = %d\n", myMsg->TTL);
+			return msg;
+		}
+		else{ //The Packet is transferable
+			if(myMsg->TTL > 0){ //Checks the packets remaining pings
+				makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, myMsg->protocol, myMsg->seq, myMsg->payload, PACKET_MAX_PAYLOAD_SIZE); //Copy the packet to the send pointer
+				call Sender.send(sendPackage, AM_BROADCAST_ADDR); //ping neighboring nodes
+				//dbg(FLOODING_CHANNEL, "Packet forwarded, TTL = %d\n", myMsg->TTL); //Unneccesary but useful debugging output
+				return msg;
+			}
+			else{ //Packet Death has occured
+				dbg(FLOODING_CHANNEL, "Packet death at node %d\n", TOS_NODE_ID);
+				return msg;
+			}
+		}
+         dbg(GENERAL_CHANNEL, "You should not be seeing this.");
          return msg;
       }
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
@@ -61,8 +82,8 @@ implementation{
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
-      makePack(&sendPackage, TOS_NODE_ID, destination, 0, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
-      call Sender.send(sendPackage, destination);
+      makePack(&sendPackage, TOS_NODE_ID, destination, 8, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
+      call Sender.send(sendPackage, AM_BROADCAST_ADDR); //Send the packet to all neighbors
    }
 
    event void CommandHandler.printNeighbors(){}
