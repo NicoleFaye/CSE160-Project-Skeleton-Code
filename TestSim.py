@@ -137,13 +137,39 @@ def main():
     s.bootAll();
     s.addChannel(s.COMMAND_CHANNEL);
     s.addChannel(s.GENERAL_CHANNEL);
-    s.addChannel(s.FLOODING_CHANNEL);
+    s.addChannel(s.FLOODING_CHANNEL);	# initialize required channels
     s.addChannel(s.NEIGHBOR_CHANNEL);
+    s.addChannel(s.ROUTING_CHANNEL);
+
 
     s.runTime(20);
-    s.ping(1, 2, "Hello, World");
+    s.ping(3, 5, "Hello, World");
     s.runTime(10);
     s.ping(1, 3, "Hi!");
+    s.ping(1, 10, "Test message"); 
+    s.runTime(500);
+
+    #s.neighborDMP(1);
+    #s.runTime(10);
+    #s.neighborDMP(5);
+    #s.runTime(10);
+    #s.neighborDMP(7);
+    #s.runTime(10);
+    #s.neighborDMP(10);
+    #s.runTime(10); 
+    #s.moteOff(11);
+    #s.runTime(100);
+    #s.neighborDMP(10);
+    #s.runTime(50);
+    s.routeDMP(1);
+    s.runTime(20);
+    s.routeDMP(7);
+    s.runTime(20);
+    s.routeDMP(4);
+    s.runTime(20);
+    s.routeDMP(9);
+    s.runTime(20);
+    s.routeDMP(13);
     s.runTime(20);
 
 if __name__ == '__main__':
