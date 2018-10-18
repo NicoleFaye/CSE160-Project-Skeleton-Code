@@ -99,9 +99,12 @@ implementation{
 
    			if(found == FALSE){ //if the neighbor wasn't already in the nList
 <<<<<<< HEAD
+<<<<<<< HEAD
    				nr.TTL = NEIGHBOR_LIFESPAN;
 =======
 >>>>>>> origin/master
+=======
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
    				call nList.pushfront(nr); //now it is
    			}
 
@@ -136,9 +139,12 @@ implementation{
   		nsize = call nList.size();
 		fsize = call forwardTable.size();
 <<<<<<< HEAD
+<<<<<<< HEAD
 		rsize = call routeTable.size();
 =======
 >>>>>>> origin/master
+=======
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 
    		//ROUTE CHECKING
    		for(i = 0; i < nsize; i++){ //nested for loops for addition handling
@@ -160,10 +166,14 @@ implementation{
    				call routeTable.pushback(r);
    				fsize = call forwardTable.size();
 <<<<<<< HEAD
+<<<<<<< HEAD
    				makePack(&sendPackage, TOS_NODE_ID, n.id, 1, PROTOCOL_ROUTEUPDATE, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 =======
    				makePack(&sendPackage, TOS_NODE_ID, n.id, 1, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 >>>>>>> origin/master
+=======
+   				makePack(&sendPackage, TOS_NODE_ID, n.id, 1, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
    				exclusiveBroadcast(n.id);
    				currentSeq++;
    			}
@@ -182,26 +192,36 @@ implementation{
    			}
    			if(found == FALSE){ //if the entry doesn't exist then the neighbor is dead
 <<<<<<< HEAD
+<<<<<<< HEAD
    				r.cost = INFINITE_COST;
    				id = r.dest;
    				//dbg(GENERAL_CHANNEL, "node %d has died\n", id);
 
 =======
+=======
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
    				rp->cost = INFINITE_COST;
    				id = rp->dest;
    				dbg(GENERAL_CHANNEL, "node %d has died", id);
 
    				rsize = call routeTable.size();
+<<<<<<< HEAD
 >>>>>>> origin/master
+=======
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
    				for(j = 0; j < rsize; j++){
    					rp = call routeTable.getAddr(j);
    					if(rp->next == id){
    						rp->cost = INFINITE_COST;
 <<<<<<< HEAD
+<<<<<<< HEAD
    						makePack(&sendPackage, TOS_NODE_ID, rp->dest, INFINITE_COST, PROTOCOL_ROUTEUPDATE, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 =======
    						makePack(&sendPackage, TOS_NODE_ID, rp->dest, INFINITE_COST, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 >>>>>>> origin/master
+=======
+   						makePack(&sendPackage, TOS_NODE_ID, rp->dest, INFINITE_COST, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
    						exclusiveBroadcast(id);
    						currentSeq++;
    					}
@@ -218,6 +238,7 @@ implementation{
 
 		//PROTOCOL FOR NEIGHBOR DISCOVERY
 <<<<<<< HEAD
+<<<<<<< HEAD
 		if(myMsg->protocol == PROTOCOL_NEIGHBORPING){ //packet recieved from a node running discovery
 			//dbg(NEIGHBOR_CHANNEL, "%d -> %d", myMsg->dest, TOS_NODE_ID); //log the path of recieving packet
 			makePack(&sendPackage, TOS_NODE_ID, myMsg->dest, myMsg->TTL-1, PROTOCOL_NEGHBORREPLY, myMsg->seq, myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
@@ -226,6 +247,8 @@ implementation{
 		}
 		if(myMsg->protocol == PROTOCOL_NEGHBORREPLY){ //packet is a neighbor reply
 =======
+=======
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 		if(myMsg->protocol == 6){ //packet recieved from a node running discovery
 			//dbg(NEIGHBOR_CHANNEL, "%d -> %d", myMsg->dest, TOS_NODE_ID); //log the path of recieving packet
 			makePack(&sendPackage, TOS_NODE_ID, myMsg->dest, myMsg->TTL-1, 7, myMsg->seq, myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
@@ -233,7 +256,10 @@ implementation{
 			return msg;
 		}
 		if(myMsg->protocol == 7){ //packet is a neighbor reply
+<<<<<<< HEAD
 >>>>>>> origin/master
+=======
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 			if(myMsg->dest == TOS_NODE_ID){ //packet has returned to dest
 				neighbor n;
 				n.id = myMsg->src; //UPDATE THE NEIGHBOR LIST
@@ -248,10 +274,14 @@ implementation{
 
 		//PROTOCOL FOR ROUTING TABLE UPDATES
 <<<<<<< HEAD
+<<<<<<< HEAD
 		if(myMsg->protocol == PROTOCOL_ROUTEUPDATE){ //PROTOCOL FOR RECIEVING A ROUTE UPDATE
 =======
 		if(myMsg->protocol == 8){ //PROTOCOL FOR RECIEVING A ROUTE UPDATE
 >>>>>>> origin/master
+=======
+		if(myMsg->protocol == 8){ //PROTOCOL FOR RECIEVING A ROUTE UPDATE
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 			route r;
 			route* rp;
 			bool found = FALSE;
@@ -280,10 +310,14 @@ implementation{
 							rp->cost += 1;
 						}
 <<<<<<< HEAD
+<<<<<<< HEAD
 						makePack(&sendPackage, TOS_NODE_ID, rp->dest, rp->cost, PROTOCOL_ROUTEUPDATE, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 =======
 						makePack(&sendPackage, TOS_NODE_ID, rp->dest, rp->cost, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 >>>>>>> origin/master
+=======
+						makePack(&sendPackage, TOS_NODE_ID, rp->dest, rp->cost, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 						exclusiveBroadcast(myMsg->src);
 						currentSeq++;
 
@@ -296,6 +330,7 @@ implementation{
 								return msg; //give up lmao
 							}
 <<<<<<< HEAD
+<<<<<<< HEAD
 							makePack(&sendPackage, TOS_NODE_ID, rp->dest, rp->cost, PROTOCOL_ROUTEUPDATE, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 							//call Sender.send(sendPackage, myMsg->src);
 							//currentSeq++;
@@ -303,22 +338,31 @@ implementation{
 						}
 						if(rp->cost == INFINITE_COST){ //if my path is broken
 =======
+=======
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 							makePack(&sendPackage, TOS_NODE_ID, rp->dest, rp->cost, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 							call Sender.send(sendPackage, myMsg->src);
 							currentSeq++;
 							return msg;
 						}
 						if(rp->cost >= INFINITE_COST){ //if my path is broken
+<<<<<<< HEAD
 >>>>>>> origin/master
+=======
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 							//change the route and tell my neighbors
 							rp->next = myMsg->src;
 							rp->cost = myMsg->TTL;
 							rp->cost += 1;
 <<<<<<< HEAD
+<<<<<<< HEAD
 							makePack(&sendPackage, TOS_NODE_ID, rp->dest, rp->cost, PROTOCOL_ROUTEUPDATE, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 =======
 							makePack(&sendPackage, TOS_NODE_ID, rp->dest, rp->cost, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 >>>>>>> origin/master
+=======
+							makePack(&sendPackage, TOS_NODE_ID, rp->dest, rp->cost, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 							exclusiveBroadcast(myMsg->src);
 							currentSeq++;
 							return msg;
@@ -330,10 +374,14 @@ implementation{
 							rp->cost = myMsg->TTL;
 							rp->cost += 1;
 <<<<<<< HEAD
+<<<<<<< HEAD
 							makePack(&sendPackage, TOS_NODE_ID, rp->dest, rp->cost, PROTOCOL_ROUTEUPDATE, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 =======
 							makePack(&sendPackage, TOS_NODE_ID, rp->dest, rp->cost, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 >>>>>>> origin/master
+=======
+							makePack(&sendPackage, TOS_NODE_ID, rp->dest, rp->cost, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 							exclusiveBroadcast(myMsg->src);
 							currentSeq++;
 							return msg;
@@ -349,10 +397,14 @@ implementation{
 				r.cost += 1;
 				call routeTable.pushfront(r); //add it to the route table
 <<<<<<< HEAD
+<<<<<<< HEAD
 				makePack(&sendPackage, TOS_NODE_ID, r.dest, r.cost, PROTOCOL_ROUTEUPDATE, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 =======
 				makePack(&sendPackage, TOS_NODE_ID, r.dest, r.cost, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
 >>>>>>> origin/master
+=======
+				makePack(&sendPackage, TOS_NODE_ID, r.dest, r.cost, 8, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 				exclusiveBroadcast(myMsg->src); //forward it to neighbors
 				currentSeq++;
 				//dbg(ROUTING_CHANNEL, "new route broadcasted\n");
@@ -365,26 +417,36 @@ implementation{
 		if(myMsg->dest == TOS_NODE_ID){ //Checks to see if the current node is the destination of the packet
 			//protocol = ping
 <<<<<<< HEAD
+<<<<<<< HEAD
 			if(myMsg->protocol == PROTOCOL_PING) {
 				dbg(FLOODING_CHANNEL, "Packet has reached the destination: %d.\n", TOS_NODE_ID);	
 				dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload); //Submit the payload to the general channel
 				makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, currentSeq, "Thanks! <3", PACKET_MAX_PAYLOAD_SIZE);
 =======
+=======
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 			if(myMsg->protocol == 0) {
 				dbg(FLOODING_CHANNEL, "Packet has reached the destination: %d.\n", TOS_NODE_ID);	
 				dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload); //Submit the payload to the general channel
 				makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, 1, currentSeq, "Thanks! <3", PACKET_MAX_PAYLOAD_SIZE);
+<<<<<<< HEAD
 >>>>>>> origin/master
+=======
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 				call Sender.send(sendPackage, AM_BROADCAST_ADDR); //ping neighboring nodes
 				currentSeq++;
 				return msg;
 			}
 			//protocol = ping reply
 <<<<<<< HEAD
+<<<<<<< HEAD
 			else if(myMsg->protocol == PROTOCOL_PINGREPLY){
 =======
 			else if(myMsg->protocol == 1){
 >>>>>>> origin/master
+=======
+			else if(myMsg->protocol == 1){
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 				dbg(FLOODING_CHANNEL, "Ping reply recieved! \n");
 				dbg(GENERAL_CHANNEL, "Payload: %s \n", myMsg->payload);
 				return msg;
@@ -402,10 +464,14 @@ implementation{
 			for(i=0; i<size; i++){
 				prev = call prevPacks.get(i);
 <<<<<<< HEAD
+<<<<<<< HEAD
 				if(myMsg->src == prev.src && myMsg->seq == prev.seq){
 =======
 				if(myMsg->src == prev.src && myMsg->dest == prev.dest && myMsg->seq == prev.seq){
 >>>>>>> origin/master
+=======
+				if(myMsg->src == prev.src && myMsg->dest == prev.dest && myMsg->seq == prev.seq){
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 					return msg;
 				}
 			}
@@ -432,10 +498,14 @@ implementation{
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
 <<<<<<< HEAD
+<<<<<<< HEAD
       makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, PROTOCOL_PING, currentSeq, payload, PACKET_MAX_PAYLOAD_SIZE);
 =======
       makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, currentSeq, payload, PACKET_MAX_PAYLOAD_SIZE);
 >>>>>>> origin/master
+=======
+      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, currentSeq, payload, PACKET_MAX_PAYLOAD_SIZE);
+>>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
       call Sender.send(sendPackage, AM_BROADCAST_ADDR); //Send the packet to all neighbors
       currentSeq++;
    }
