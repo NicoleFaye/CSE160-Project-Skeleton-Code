@@ -171,13 +171,13 @@ implementation{
    				}
    			}
    			if(found == FALSE){ //if the entry doesn't exist then the neighbor is dead
-   				r.cost = INFINITE_COST; 																//CHANGED
-   				id = r.dest;																			//CHANGED
+   				r.cost = INFINITE_COST;
+   				id = r.dest;
    				//dbg(GENERAL_CHANNEL, "node %d has died\n", id);
 
    				for(j = 0; j < rsize; j++){
    					rp = call routeTable.getAddr(j);
-   					if(rp->next == id){																	//CHANGED
+   					if(rp->next == id){
    						rp->cost = INFINITE_COST;
    						makePack(&sendPackage, TOS_NODE_ID, rp->dest, INFINITE_COST, PROTOCOL_ROUTEUPDATE, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
    						exclusiveBroadcast(id);
@@ -256,11 +256,11 @@ implementation{
 								return msg; //give up lmao
 							}
 							makePack(&sendPackage, TOS_NODE_ID, rp->dest, rp->cost, PROTOCOL_ROUTEUPDATE, currentSeq, "route update", PACKET_MAX_PAYLOAD_SIZE);
-							//call Sender.send(sendPackage, myMsg->src);									//CHANGED
-							//currentSeq++;																	//CHANGED
+							//call Sender.send(sendPackage, myMsg->src);
+							//currentSeq++;
 							return msg;
 						}
-						if(rp->cost == INFINITE_COST){ //if my path is broken								//CHANGED
+						if(rp->cost == INFINITE_COST){ //if my path is broken
 							//change the route and tell my neighbors
 							rp->next = myMsg->src;
 							rp->cost = myMsg->TTL;
