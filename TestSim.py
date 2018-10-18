@@ -143,11 +143,19 @@ def main():
 
 
     s.runTime(20);
+<<<<<<< HEAD
     s.ping(3, 6, "Hello, World");
     #s.runTime(10);
     #s.ping(1, 3, "Hi!");
     #s.ping(1, 10, "Test message"); 
     s.runTime(200);
+=======
+    s.ping(3, 5, "Hello, World");
+    s.runTime(10);
+    s.ping(1, 3, "Hi!");
+    s.ping(1, 10, "Test message"); 
+    s.runTime(500);
+>>>>>>> origin/master
 
     #s.neighborDMP(1);
     #s.runTime(10);
@@ -155,6 +163,7 @@ def main():
     #s.runTime(10);
     #s.neighborDMP(7);
     #s.runTime(10);
+<<<<<<< HEAD
     #s.neighborDMP(3);
     #s.runTime(10); 
     #s.moteOff(6);
@@ -169,6 +178,23 @@ def main():
     s.runTime(100);
     s.routeDMP(3);
     #s.routeDMP(9);
+=======
+    #s.neighborDMP(10);
+    #s.runTime(10); 
+    #s.moteOff(11);
+    #s.runTime(100);
+    #s.neighborDMP(10);
+    #s.runTime(50);
+    s.routeDMP(1);
+    s.runTime(20);
+    s.routeDMP(7);
+    s.runTime(20);
+    s.routeDMP(4);
+    s.runTime(20);
+    s.routeDMP(9);
+    s.runTime(20);
+    s.routeDMP(13);
+>>>>>>> origin/master
     s.runTime(20);
     #s.routeDMP(13);
     #s.runTime(20);
