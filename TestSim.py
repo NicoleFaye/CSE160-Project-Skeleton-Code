@@ -143,25 +143,11 @@ def main():
 
 
     s.runTime(20);
-<<<<<<< HEAD
-<<<<<<< HEAD
     s.ping(3, 6, "Hello, World");
     #s.runTime(10);
     #s.ping(1, 3, "Hi!");
     #s.ping(1, 10, "Test message"); 
-    s.runTime(200);
-=======
-=======
->>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
-    s.ping(3, 5, "Hello, World");
-    s.runTime(10);
-    s.ping(1, 3, "Hi!");
-    s.ping(1, 10, "Test message"); 
-    s.runTime(500);
-<<<<<<< HEAD
->>>>>>> origin/master
-=======
->>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
+    s.runTime(400);
 
     #s.neighborDMP(1);
     #s.runTime(10);
@@ -169,8 +155,6 @@ def main():
     #s.runTime(10);
     #s.neighborDMP(7);
     #s.runTime(10);
-<<<<<<< HEAD
-<<<<<<< HEAD
     #s.neighborDMP(3);
     #s.runTime(10); 
     #s.moteOff(6);
@@ -182,31 +166,9 @@ def main():
     s.runTime(20);
     
     s.moteOff(5);
-    s.runTime(100);
+    s.runTime(150);
     s.routeDMP(3);
     #s.routeDMP(9);
-=======
-=======
->>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
-    #s.neighborDMP(10);
-    #s.runTime(10); 
-    #s.moteOff(11);
-    #s.runTime(100);
-    #s.neighborDMP(10);
-    #s.runTime(50);
-    s.routeDMP(1);
-    s.runTime(20);
-    s.routeDMP(7);
-    s.runTime(20);
-    s.routeDMP(4);
-    s.runTime(20);
-    s.routeDMP(9);
-    s.runTime(20);
-    s.routeDMP(13);
-<<<<<<< HEAD
->>>>>>> origin/master
-=======
->>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
     s.runTime(20);
     #s.routeDMP(13);
     #s.runTime(20);

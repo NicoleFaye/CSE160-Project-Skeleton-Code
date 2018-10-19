@@ -18,15 +18,7 @@ enum{
 	//additionals
 	PROTOCOL_NEIGHBORPING = 6,
 	PROTOCOL_NEGHBORREPLY = 7,
-<<<<<<< HEAD
-<<<<<<< HEAD
 	PROTOCOL_ROUTEUPDATE = 8,
-=======
-	PROROCOL_ROUTEUPDATE = 8,
->>>>>>> origin/master
-=======
-	PROROCOL_ROUTEUPDATE = 8,
->>>>>>> 3d5311843a03d2ff9293e8723a74001093cf871a
 
    PROTOCOL_CMD = 99
 };
