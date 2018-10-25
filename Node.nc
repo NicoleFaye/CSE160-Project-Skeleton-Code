@@ -42,6 +42,8 @@ implementation{
 
    void exclusiveBroadcast(uint16_t exception);
 
+   void smartPing();
+
    event void Boot.booted(){
       call AMControl.start();
       call ntimer.startPeriodic(200000);
@@ -307,7 +309,7 @@ implementation{
 				dbg(FLOODING_CHANNEL, "Packet has reached the destination: %d.\n", TOS_NODE_ID);	
 				dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload); //Submit the payload to the general channel
 				makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, currentSeq, "Thanks! <3", PACKET_MAX_PAYLOAD_SIZE);
-				call Sender.send(sendPackage, AM_BROADCAST_ADDR); //ping neighboring nodes
+				smartPing(); //ping neighboring nodes
 				currentSeq++;
 				return msg;
 			}
@@ -335,7 +337,7 @@ implementation{
 			}
 			if(myMsg->TTL > 0){ //Checks the packets remaining pings
 				makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, myMsg->protocol, myMsg->seq, myMsg->payload, PACKET_MAX_PAYLOAD_SIZE); //Copy the packet to the send pointer
-				call Sender.send(sendPackage, AM_BROADCAST_ADDR); //ping neighboring nodes
+				smartPing(); //ping neighboring nodes
 				call prevPacks.pushfront(sendPackage);
 				//dbg(FLOODING_CHANNEL, "Packet forwarded, TTL = %d\n", myMsg->TTL); //Unneccesary but useful debugging output
 				return msg;
@@ -354,10 +356,11 @@ implementation{
 
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
-      dbg(GENERAL_CHANNEL, "PING EVENT \n");
-      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, PROTOCOL_PING, currentSeq, payload, PACKET_MAX_PAYLOAD_SIZE);
-      call Sender.send(sendPackage, AM_BROADCAST_ADDR); //Send the packet to all neighbors
-      currentSeq++;
+   	  dbg(GENERAL_CHANNEL, "PING EVENT \n");
+   	  makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, PROTOCOL_PING, currentSeq, payload, PACKET_MAX_PAYLOAD_SIZE);
+   	  smartPing();
+   	  currentSeq++;
+   	  
    }
 
    event void CommandHandler.printNeighbors(){
@@ -426,5 +429,38 @@ implementation{
    				call Sender.send(sendPackage, n.id);
    			}
    		}
+   }
+
+   void smartPing(){ //Pings the current sendPackage using DVR table
+   		int rsize;
+   	  	int i;
+   	 	bool found;
+   		route r;
+
+   	  	if(call routeTable.isEmpty()){ //If there is no routing table
+      		call Sender.send(sendPackage, AM_BROADCAST_ADDR); //Send the packet to all neighbors
+      		return;
+   	  	}
+   	 	else{
+   	    	rsize = call routeTable.size();
+   	    	found = FALSE;
+
+   	    	for(i = 0; i < rsize; i++){ //Search DVR table
+        		r = call routeTable.get(i);
+   	  			if(sendPackage.dest == r.dest){ //If matching route is found
+   	  				found == TRUE;
+   	  				if(r.cost == INFINITE_COST){ //If node is dead throw an error 
+   	  					dbg(GENERAL_CHANNEL, "Node %d: Disconnected - Packet Dropped\n", r.dest);
+   	  					return;
+   	  				}
+   	  				call Sender.send(sendPackage, r.next);
+   					return;
+   	  			}
+   	   		}
+   	   		if(!found){
+   	   			call Sender.send(sendPackage, AM_BROADCAST_ADDR); //Flood!
+   	   			return;
+   	   		}
+   	  	}
    }
 }

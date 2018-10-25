@@ -162,13 +162,18 @@ def main():
     #s.neighborDMP(3);
     #s.runTime(10);
     #s.runTime(50);
+    s.ping(3, 6, "Hello, World");
+    s.runTime(20);
     s.routeDMP(3);
     s.runTime(20);
+    
     
     s.moteOff(5);
     s.runTime(150);
     s.routeDMP(3);
     #s.routeDMP(9);
+    s.runTime(20);
+    s.ping(3, 5, "Hello, World");
     s.runTime(20);
     #s.routeDMP(13);
     #s.runTime(20);
