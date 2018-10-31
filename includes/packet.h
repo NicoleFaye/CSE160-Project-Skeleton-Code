@@ -52,12 +52,12 @@ typedef nx_struct route{
 
 //PROJECT 3
 //TCP
-typedef nx_struct SockPack{
+typedef nx_struct sockPack{
 	nx_uint16_t status; //SYN/ACK/FIN
 	nx_uint16_t TTL; //used in ACK Packet timeouts for loss detection
 
 	pack payload;
-}socketPacket;
+}sockPack;
 
 typedef nx_struct socket{
 	nx_uint16_t src; //THIS ID
@@ -66,8 +66,11 @@ typedef nx_struct socket{
 	nx_uint16_t dest; //DEST ID
 	nx_uint16_t destPort; //DEST PORT#
 
-	SockPack Inbound[MAX_TRANSMISSION_SIZE]; //Inbound Queue
-	SockPack Outbound[MAX_TRANSMISSION_SIZE]; //Outbound Queue
+	nx_uint16_t indexI;
+	nx_uint16_t indexO;
+
+	sockPack inbound[MAX_TRANSMISSION_SIZE]; //Inbound Queue - pop data after proccessing
+	sockPack outbound[MAX_TRANSMISSION_SIZE]; //Outbound Queue - pop data after proccessing
 }socket;
 
 

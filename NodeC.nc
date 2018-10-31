@@ -24,7 +24,8 @@ implementation {
     components new ListC(route,64) as forwardTableC;
     components new TimerMilliC() as ntimerC;
     components new TimerMilliC() as rtimerC;
-    components new TimerMilliC() as TCPtimerC;
+    components new TimerMilliC() as inbound_TCPtimerC;
+    components new TimerMilliC() as outbound_TCPtimerC;
 
 
     Node -> MainC.Boot;
@@ -46,5 +47,6 @@ implementation {
     Node.forwardTable -> forwardTableC;
     Node.ntimer -> ntimerC;
     Node.rtimer -> rtimerC;
-    Node.TCPtimer -> TCPtimerC;
+    Node.inbound_TCPtimer -> inbound_TCPtimerC;
+    Node.outbound_TCPtimer -> outbound_TCPtimerC;
 }

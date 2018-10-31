@@ -29,7 +29,8 @@ module Node{
    uses interface List<route> as forwardTable;
    uses interface Timer<TMilli> as ntimer;
    uses interface Timer<TMilli> as rtimer;
-   uses interface Timer<TMilli> as TCPtimer;
+   uses interface Timer<TMilli> as inbound_TCPtimer;
+   uses interface Timer<TMilli> as outbound_TCPtimer;
 }
 
 implementation{
@@ -49,7 +50,8 @@ implementation{
       call AMControl.start();
       call ntimer.startPeriodic(200000);
       call rtimer.startPeriodic(200000);
-      //call TCPtimer.startPeriodic(30000);
+      //call inbound_TCPtimer.startPeriodic(30000);
+      //call outbound_TCPtimer.startPeriodic(30000);
       dbg(GENERAL_CHANNEL, "Booted\n");
    }
 
@@ -192,6 +194,10 @@ implementation{
    			}
    		}
    }
+
+   event void inbound_TCPtimer.fired(){} //PROJECT 3
+
+   event void outbound_TCPtimer.fired(){} //PROJECT 3
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
       if(len==sizeof(pack)){
@@ -417,13 +423,35 @@ implementation{
 
    event void CommandHandler.printDistanceVector(){}
 
-   event void CommandHandler.setTestServer(){} // PROJECT 3
+   // PROJECT 3
+   //set up a server at this node to recieve data from a client node
+   event void CommandHandler.setTestServer(uint8_t port){
+   		//Self = Server
+   		//set up inbound timer here
 
-   event void CommandHandler.setTestClient(){} // PROJECT 3
+   }
+
+
+   // PROJECT 3
+   //Establish a connection with a server node and transmit arbitrary bytes of data
+   event void CommandHandler.setTestClient(uint16_t dest, uint8_t srcPort, uint8_t destPort, uint16_t num){
+		//Self = Client
+		//num = the nuber of bytes being transmitted
+		//set up outbound timer here
+
+   } 
 
    event void CommandHandler.setAppServer(){}
 
    event void CommandHandler.setAppClient(){}
+
+
+   // PROJECT 3
+   //Close a connection to a server node
+   event void CommandHandler.closeConnection(uint16_t dest, uint8_t srcPort, uint8_t destPort){
+   		//self = Client
+
+   }
 
    void handleNeighborDeath(uint16_t index){
 

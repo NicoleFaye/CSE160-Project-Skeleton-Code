@@ -24,6 +24,7 @@ implementation{
             CommandMsg *msg;
             uint8_t commandID;
             uint8_t* buff;
+            uint8_t num;
             message_t *raw_msg;
             void *payload;
 
@@ -70,12 +71,19 @@ implementation{
 
             case CMD_TEST_CLIENT:
                 dbg(COMMAND_CHANNEL, "Command Type: Client\n");
-                signal CommandHandler.setTestClient();
+                num = buff[3];
+                num = num | (buff[4] << 8);
+                signal CommandHandler.setTestClient(buff[0], buff[1], buff[2], num);
                 break;
 
             case CMD_TEST_SERVER:
                 dbg(COMMAND_CHANNEL, "Command Type: Client\n");
-                signal CommandHandler.setTestServer();
+                signal CommandHandler.setTestServer(buff[0]);
+                break;
+
+            case CMD_CLOSE_CONNECTION:
+                dbg(COMMAND_CHANNEL, "Command Type: Close Connection\n");
+                signal CommandHandler.closeConnection(buff[0], buff[1], buff[2]);
                 break;
 
             default:
