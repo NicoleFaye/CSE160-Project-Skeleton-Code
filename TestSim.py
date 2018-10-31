@@ -125,6 +125,15 @@ class TestSim:
     def routeDMP(self, destination):
         self.sendCMD(self.CMD_ROUTE_DUMP, destination, "routing command");
 
+    def newServer(self, target, port):
+        self.sendCMD(self.CMD_TEST_SERVER, target, "{0}".format(chr(port)));
+
+    def newClient(self, target, dest, srcPort, destPort, num):
+        self.sendCMD(self.CMD_TEST_CLIENT, target, "{0}{1}{2}{3}{4}").format(chr(dest),chr(srcPort),chr(destPort),chr(num & 0xFF),chr((num >> 8) & 0xFF)));
+
+    def clientClose(self, target, dest, srcPort, destPort):
+        self.sendCMD(self.CMD_CLOSE_CONNECTION, target, "{0}{1}{2}".format(chr(dest),chr(srcPort),chr(destPort)));
+
     def addChannel(self, channelName, out=sys.stdout):
         print 'Adding Channel', channelName;
         self.t.addChannel(channelName, out);
@@ -143,40 +152,33 @@ def main():
 
 
     s.runTime(20);
-    s.ping(3, 6, "Hello, World");
-    #s.runTime(10);
-    #s.ping(1, 3, "Hi!");
-    #s.ping(1, 10, "Test message"); 
-    s.runTime(400);
+    s.ping(3, 6, "Flood me!");
 
-    #s.neighborDMP(1);
-    #s.runTime(10);
-    #s.neighborDMP(5);
-    #s.runTime(10);
-    #s.neighborDMP(7);
-    #s.runTime(10);
-    #s.neighborDMP(3);
-    #s.runTime(10); 
-    #s.moteOff(6);
-    #s.runTime(100);
-    #s.neighborDMP(3);
-    #s.runTime(10);
-    #s.runTime(50);
-    s.ping(3, 6, "Hello, World");
+    s.runTime(400); #Wait for NB + DVR table updates
+
+    s.ping(3, 5, "Wassup my guy?");
     s.runTime(20);
     s.routeDMP(3);
     s.runTime(20);
     
     
     s.moteOff(5);
-    s.runTime(150);
+    s.runTime(150); #Wait for NB + DVR table updates
+
     s.routeDMP(3);
-    #s.routeDMP(9);
     s.runTime(20);
-    s.ping(3, 5, "Hello, World");
+    s.ping(3, 5, "You alive?");
     s.runTime(20);
-    #s.routeDMP(13);
-    #s.runTime(20);
+
+    s.moteOn(5);
+    s.runTime(200); #Wait for NB + DVR table updates
+
+    s.routeDMP(3);
+    s.runTime(20);
+    s.ping(3, 5, "Welcome back!");
+    s.runTime(20);
+    s.ping(3, 5, "Y dont dis work wtf?");
+    s.runTime(100);
 
 if __name__ == '__main__':
     main()

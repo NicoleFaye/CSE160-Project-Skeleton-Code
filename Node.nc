@@ -29,6 +29,7 @@ module Node{
    uses interface List<route> as forwardTable;
    uses interface Timer<TMilli> as ntimer;
    uses interface Timer<TMilli> as rtimer;
+   uses interface Timer<TMilli> as TCPtimer;
 }
 
 implementation{
@@ -48,6 +49,7 @@ implementation{
       call AMControl.start();
       call ntimer.startPeriodic(200000);
       call rtimer.startPeriodic(200000);
+      //call TCPtimer.startPeriodic(30000);
       dbg(GENERAL_CHANNEL, "Booted\n");
    }
 
@@ -301,6 +303,24 @@ implementation{
 			return msg;
 		}
 
+
+		//PROTOCOL FOR TCP PACKETS
+		if(myMsg->protocol = PROTOCOL_TCP){
+
+
+
+			//IMPLIMENT THIS FOR PROJECT 3
+
+			/*
+			*	When Transmitting an ACK packet:
+			*	Make the SEQ of the ACK pack be the SEQ of the recieved pack + 1
+			*	"This is the next packet I expect from you."
+			*
+			*	Consider making a TCPLayer.nc File
+			*/
+
+		}
+
 		
 		//PROTOCOL FOR NORMAL PING
 		if(myMsg->dest == TOS_NODE_ID){ //Checks to see if the current node is the destination of the packet
@@ -397,9 +417,9 @@ implementation{
 
    event void CommandHandler.printDistanceVector(){}
 
-   event void CommandHandler.setTestServer(){}
+   event void CommandHandler.setTestServer(){} // PROJECT 3
 
-   event void CommandHandler.setTestClient(){}
+   event void CommandHandler.setTestClient(){} // PROJECT 3
 
    event void CommandHandler.setAppServer(){}
 
