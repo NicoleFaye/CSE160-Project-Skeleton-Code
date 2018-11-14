@@ -618,6 +618,19 @@ implementation{
    //Close a connection to a server node
    event void CommandHandler.closeConnection(uint16_t dest, uint8_t srcPort, uint8_t destPort){
    		//self = Client
+   		TCP_PAYLOAD control;
+   		socket_store_t* sock = findSocket(srcPort);
+
+   		control.flag = FIN;
+   		control.srcPort = sock->src;
+   		control.destPort = destPort;
+
+   		makePack(&sendPackage, TOS_NODE_ID, dest, MAX_TTL, PROTOCOL_TCP, currentSeq, (uint8_t*)&control, sizeof(TCP_PAYLOAD));
+   		smartPing();
+   		currentSeq++;
+
+   		sock->state = CLOSED;
+   		sock->src = NULL;
 
    }
 
