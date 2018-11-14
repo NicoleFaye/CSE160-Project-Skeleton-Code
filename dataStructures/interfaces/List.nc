@@ -22,6 +22,7 @@ interface List<t>{
 	command t back();
 	command bool isEmpty();
 	command uint16_t size();
+	command uint16_t maxSize();
 	command t get(uint16_t position);
 	command t* getAddr(uint16_t position);
 }

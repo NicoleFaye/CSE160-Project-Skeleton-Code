@@ -125,13 +125,13 @@ class TestSim:
     def routeDMP(self, destination):
         self.sendCMD(self.CMD_ROUTE_DUMP, destination, "routing command");
 
-    def newServer(self, target, port):
+    def newServer(self, target, port): #Project 3
         self.sendCMD(self.CMD_TEST_SERVER, target, "{0}".format(chr(port)));
 
-    def newClient(self, target, dest, srcPort, destPort, num):
-        self.sendCMD(self.CMD_TEST_CLIENT, target, "{0}{1}{2}{3}{4}").format(chr(dest),chr(srcPort),chr(destPort),chr(num & 0xFF),chr((num >> 8) & 0xFF)));
+    def newClient(self, target, dest, srcPort, destPort, num): #Project 3
+        self.sendCMD(self.CMD_TEST_CLIENT, target, "{0}{1}{2}{3}{4}").format(chr(dest),chr(srcPort),chr(destPort),chr(num & 0xFF),chr((num >> 8) & 0xFF));
 
-    def clientClose(self, target, dest, srcPort, destPort):
+    def clientClose(self, target, dest, srcPort, destPort): #Project 3
         self.sendCMD(self.CMD_CLOSE_CONNECTION, target, "{0}{1}{2}".format(chr(dest),chr(srcPort),chr(destPort)));
 
     def addChannel(self, channelName, out=sys.stdout):

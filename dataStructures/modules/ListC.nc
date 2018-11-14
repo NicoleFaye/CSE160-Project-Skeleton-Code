@@ -88,6 +88,10 @@ implementation{
 		return size;
 	}
 
+	command uint16_t List.maxSize(){
+		return MAX_SIZE;
+	}
+
 	command t List.get(uint16_t position){
 		return container[position];
 	}

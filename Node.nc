@@ -9,6 +9,7 @@
 #include <Timer.h>
 #include "includes/command.h"
 #include "includes/packet.h"
+#include "includes/socket.h"
 #include "includes/CommandMsg.h"
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
@@ -22,21 +23,27 @@ module Node{
    uses interface SimpleSend as Sender;
 
    uses interface CommandHandler;
-   uses interface List<neighbor> as nList;
-   uses interface List<neighbor> as nRefresher;
-   uses interface List<pack> as prevPacks;
-   uses interface List<route> as routeTable;
-   uses interface List<route> as forwardTable;
-   uses interface Timer<TMilli> as ntimer;
-   uses interface Timer<TMilli> as rtimer;
-   uses interface Timer<TMilli> as inbound_TCPtimer;
-   uses interface Timer<TMilli> as outbound_TCPtimer;
+
+   //LISTS
+   uses interface List<neighbor> as nList; //P1
+   uses interface List<neighbor> as nRefresher; //P1
+   uses interface List<pack> as prevPacks; //P1
+   uses interface List<route> as routeTable; //P2
+   uses interface List<route> as forwardTable; //P2
+   uses interface List<socket_store_t> as sockets; //P3
+
+   //TIMERS
+   uses interface Timer<TMilli> as ntimer; //P1
+   uses interface Timer<TMilli> as rtimer; //P2
+   uses interface Timer<TMilli> as TCPtimer; //P3
 }
 
 implementation{
    pack sendPackage;
    uint16_t currentSeq = 0;
-   //neighbor n = {TOS_NODE_ID}; //a basic placeholder for a neighbor struct, used in some functions
+
+
+   uint16_t nextPort = 0;
    
 
    // Prototypes
@@ -48,10 +55,9 @@ implementation{
 
    event void Boot.booted(){
       call AMControl.start();
+      socketBoot();
       call ntimer.startPeriodic(200000);
       call rtimer.startPeriodic(200000);
-      //call inbound_TCPtimer.startPeriodic(30000);
-      //call outbound_TCPtimer.startPeriodic(30000);
       dbg(GENERAL_CHANNEL, "Booted\n");
    }
 
@@ -195,9 +201,30 @@ implementation{
    		}
    }
 
-   event void inbound_TCPtimer.fired(){} //PROJECT 3
 
-   event void outbound_TCPtimer.fired(){} //PROJECT 3
+
+   event void TCPtimer.fired(){//PROJECT 3// use this in set up functions -> call TCPtimer.startPeriodic(30000);
+   		//when fired this should read all incoming data from sockets and clear the buffers
+   		uint8_t i;
+   		socket_store_t* sock;
+   		uint16_t size = call sockets.maxSize();
+
+   		for(i = 0; i < size; i++){
+   			sock = call sockets.getAddr(i);
+   			if(sock->state == LISTENING){}
+
+   			if(sock->state == ESTABLISHED){}
+
+   			if(sock-state == CLOSED){}
+
+
+   		}
+
+
+
+   } 
+
+
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
       if(len==sizeof(pack)){
@@ -247,6 +274,7 @@ implementation{
 						if(myMsg->TTL == INFINITE_COST) //if the path is broken
 						{
 							//set my path to broken and tell my neighbors
+							//rp->next = NULL; 
 							rp->cost = INFINITE_COST;
 						}
 						else{ //if the path isn't broken
@@ -428,6 +456,19 @@ implementation{
    event void CommandHandler.setTestServer(uint8_t port){
    		//Self = Server
    		//set up inbound timer here
+   		//socket
+   		socket_store_t* sock;
+   		uint8_t sock_index = get_available_socket(); //get the index of an available socket
+   		
+   		sock = sockets.getAddr(sock_index); //Socket has been aquired
+
+   		sock->src = port; //Assign the socket to the provided port value
+
+   		call TCPtimer.startPeriodic(30000); //start TCP timer
+
+
+
+
 
    }
 
@@ -438,6 +479,27 @@ implementation{
 		//Self = Client
 		//num = the nuber of bytes being transmitted
 		//set up outbound timer here
+
+		socket_store_t* sock;
+   		uint8_t sock_index = get_available_socket(); //get the index of an available socket
+   		sock = sockets.getAddr(sock_index); //Socket has been aquired
+
+   		sock->src = srcPort; //Assign the socket to the provided port value
+   		sock->dest.port = destPort;
+   		sock->dest.addr = dest;
+   		sock->transferSize = num;
+   		sock->totalSent = 0;
+
+   		makepack(&sendPackage, TOS_NODE_ID, dest, MAX_TTL, PROTOCOL_TCP, currentSeq, SYN, MAX_PAYLOAD_SIZE);
+   		smartPing();
+   		currentSeq++;
+
+
+   		call TCPtimer.startPeriodic(30000); //start TCP timer
+
+
+
+
 
    } 
 
@@ -511,4 +573,35 @@ implementation{
    	   		}
    	  	}
    }
+
+   void socketBoot(){ //initializes all sockets to CLOSED durring Boot
+   		uint8_t i = 0;
+   		socket_store_t* sock;
+   		uint16_t size = call sockets.maxSize();
+   		for(i = 0; i < size; i++)
+   		{
+   			sock = call sockets.getAddr(i);
+   			sock.state = CLOSED;
+   		}
+   }
+
+   uint8_t get_available_socket(){ //returns the index of the first available (closed) socket
+   		uint8_t i = 0;
+   		socket_store_t sock;
+   		uint16_t size = call sockets.maxSize(); //look through every socket
+   		for(i = 0; i < size; i++)
+   		{
+   			sock = call sockets.get(i);
+   			if(sock.state == CLOSED){ //the first available socket index gets returned
+   				return i;
+   			}
+   		}
+   }
+
+
+   //LIST FUNCTIONS
+
+
+
+
 }
