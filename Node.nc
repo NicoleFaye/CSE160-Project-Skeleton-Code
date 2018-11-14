@@ -340,7 +340,34 @@ implementation{
 
 		//PROTOCOL FOR TCP PACKETS
 		if(myMsg->protocol = PROTOCOL_TCP){
+			if(myMsg->dest == TOS_NODE_ID){ //meant for me
 
+				if(sizeof(myMsg->payload) == sizeof(TCP_PAYLOAD)){ //if it's a control package
+					TCP_PAYLOAD control = (TCP_PAYLOAD) myMsg->payload; //cast it
+
+					if(control.flag == SYN){ //It's an attempt to establish connection
+						//respond with SYN and ACK if self is server, respond with Data if self is client.
+
+					}
+
+					if(control.flag == ACK){ //a packet of myMsg-seq has been recieved on server side
+
+					}
+
+					if(control.flag == FIN){ //lol bye
+
+					}
+
+
+				}
+
+
+			}
+			else{ //not meant for me, just forward it.
+
+				makepack(&sendPackage, myMsg->src, myMsg->dest, myMsg->seq, myMsg->TTL - 1, PROTOCOL_TCP, myMsg->seq, myMsg->payload, MAX_PAYLOAD_SIZE);
+				smartPing();
+			}
 
 
 			//IMPLIMENT THIS FOR PROJECT 3
@@ -352,6 +379,8 @@ implementation{
 			*
 			*	Consider making a TCPLayer.nc File
 			*/
+
+			return msg;
 
 		}
 
@@ -491,16 +520,12 @@ implementation{
    		sock->totalSent = 0;
 
    		makepack(&sendPackage, TOS_NODE_ID, dest, MAX_TTL, PROTOCOL_TCP, currentSeq, SYN, MAX_PAYLOAD_SIZE);
-   		smartPing();
+   		smartPing(); //send a syn pack to establish connection
    		currentSeq++;
 
+   		sock->state = SYN_SENT; //set status to awaiting ACK
 
    		call TCPtimer.startPeriodic(30000); //start TCP timer
-
-
-
-
-
    } 
 
    event void CommandHandler.setAppServer(){}

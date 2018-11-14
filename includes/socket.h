@@ -6,6 +6,12 @@ enum{
     ROOT_SOCKET_ADDR = 255,
     ROOT_SOCKET_PORT = 255,
     SOCKET_BUFFER_SIZE = 128,
+
+    //TCP RELATED VALUES
+    //MAX_TRANSMISSION_SIZE = 64, //The number of packets that are transferable in a single TCP connection
+    SYN = 1, //Establish Connection
+    ACK = 2, //Acknowledge a recieved packet
+    FIN = 3  //Close Connection
 };
 
 enum socket_state{
@@ -15,6 +21,14 @@ enum socket_state{
     SYN_SENT,
     SYN_RCVD,
 };
+
+typedef nx_struct TCP_PAYLOAD{
+    uint8_t flag;
+    nx_socket_port_t destPort; //The port I'm attempting to connect to
+    nx_socket_port_t srcPort; //The port I'm connecting from
+}SYN_PAYLOAD;
+
+typedef
 
 
 typedef nx_uint8_t nx_socket_port_t;
