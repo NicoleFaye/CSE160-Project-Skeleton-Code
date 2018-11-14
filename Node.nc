@@ -49,6 +49,12 @@ implementation{
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
+   void socketBoot();
+
+   uint8_t get_available_socket();
+
+   socket_store_t* findSocket(uint8_t port);
+
    void exclusiveBroadcast(uint16_t exception);
 
    void smartPing();
@@ -211,11 +217,11 @@ implementation{
 
    		for(i = 0; i < size; i++){
    			sock = call sockets.getAddr(i);
-   			if(sock->state == LISTENING){}
+   			if(sock->state == LISTEN){}
 
    			if(sock->state == ESTABLISHED){}
 
-   			if(sock-state == CLOSED){}
+   			if(sock->state == CLOSED){}
 
 
    		}
@@ -342,20 +348,85 @@ implementation{
 		if(myMsg->protocol = PROTOCOL_TCP){
 			if(myMsg->dest == TOS_NODE_ID){ //meant for me
 
-				if(sizeof(myMsg->payload) == sizeof(TCP_PAYLOAD)){ //if it's a control package
-					TCP_PAYLOAD control = (TCP_PAYLOAD) myMsg->payload; //cast it
+				TCP_PAYLOAD reply;
+				TCP_PAYLOAD* control;
+				socket_store_t* sock;
 
-					if(control.flag == SYN){ //It's an attempt to establish connection
+				if(sizeof(myMsg->payload) == sizeof(TCP_PAYLOAD)){ //if it's a control package
+					control = (TCP_PAYLOAD*) myMsg->payload; //cast it
+
+					sock = findSocket(control->destPort); //find the corresponding port
+						if(sock == NULL) //shit broke
+							return msg;
+
+					if(control->flag == SYN){ //It's an attempt to establish connection
 						//respond with SYN and ACK if self is server, respond with Data if self is client.
 
+						socket_store_t* sock = findSocket(control->destPort); //find the corresponding port
+						if(sock == NULL) //shit broke
+							return msg;
+
+						if(sock->state == CLOSED){ //This node is server
+							sock->state = SYN_RCVD; //Set node to response phase of handshake
+							sock->dest.port = control->srcPort;
+							sock->dest.addr = myMsg->dest;
+
+							reply.flag = ACK;
+							reply.destPort = control->srcPort;
+							reply.srcPort = sock->src;
+
+							makePack(&sendPackage, TOS_NODE_ID, myMsg->dest, myMsg->seq+1, MAX_TTL, PROTOCOL_TCP, (uint8_t*)&reply, sizeof(TCP_PAYLOAD));
+							smartPing(); //Send ACK Packet
+
+							reply.flag = SYN;
+
+							makePack(&sendPackage, TOS_NODE_ID, myMsg->dest, myMsg->seq, MAX_TTL, PROTOCOL_TCP, (uint8_t*)&reply, sizeof(TCP_PAYLOAD));
+							smartPing(); //Send SYN Packet
+							currentSeq++;
+
+							return msg;
+
+
+						}
+						if(sock->state == SYN_SENT){ //This node is client
+							sock->state = ESTABLISHED;
+
+							reply.flag = ACK;
+							reply.destPort = control->srcPort;
+							reply.srcPort = sock->src;
+
+							makePack(&sendPackage, TOS_NODE_ID, myMsg->dest, myMsg->seq+1, MAX_TTL, PROTOCOL_TCP, (uint8_t*)&reply, sizeof(TCP_PAYLOAD));
+							smartPing(); //Send ACK Packet
+
+							return msg;
+						}
+						return msg;
 					}
 
-					if(control.flag == ACK){ //a packet of myMsg-seq has been recieved on server side
+					if(control->flag == ACK){ //ACK PACC BOIIII
+
+						if(sock->state == ESTABLISHED){
+							sock->lastAck = myMsg->seq;
+							return msg;
+						}
+
+						if(sock->state == SYN_RCVD){
+							sock->state = LISTEN;
+							sock->lastRcvd = myMsg->seq;
+							sock->nextExpected = myMsg->seq + 1;
+							return msg;
+						}
+
+						if(sock->state == SYN_SENT){
+							sock->lastAck = myMsg->seq;
+							return msg;
+						}
 
 					}
 
-					if(control.flag == FIN){ //lol bye
-
+					if(control->flag == FIN){ //lol bye
+						sock->state = CLOSED;
+						return msg;
 					}
 
 
@@ -365,7 +436,7 @@ implementation{
 			}
 			else{ //not meant for me, just forward it.
 
-				makepack(&sendPackage, myMsg->src, myMsg->dest, myMsg->seq, myMsg->TTL - 1, PROTOCOL_TCP, myMsg->seq, myMsg->payload, MAX_PAYLOAD_SIZE);
+				makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->seq, myMsg->TTL - 1, PROTOCOL_TCP, myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
 				smartPing();
 			}
 
@@ -381,6 +452,11 @@ implementation{
 			*/
 
 			return msg;
+
+		}
+
+		if(myMsg->protocol == PROTOCOL_TCPDATA){ //used for actual data transmission on a TCP connection
+
 
 		}
 
@@ -489,7 +565,7 @@ implementation{
    		socket_store_t* sock;
    		uint8_t sock_index = get_available_socket(); //get the index of an available socket
    		
-   		sock = sockets.getAddr(sock_index); //Socket has been aquired
+   		sock = call sockets.getAddr(sock_index); //Socket has been aquired
 
    		sock->src = port; //Assign the socket to the provided port value
 
@@ -510,8 +586,9 @@ implementation{
 		//set up outbound timer here
 
 		socket_store_t* sock;
+		TCP_PAYLOAD control;
    		uint8_t sock_index = get_available_socket(); //get the index of an available socket
-   		sock = sockets.getAddr(sock_index); //Socket has been aquired
+   		sock = call sockets.getAddr(sock_index); //Socket has been aquired
 
    		sock->src = srcPort; //Assign the socket to the provided port value
    		sock->dest.port = destPort;
@@ -519,7 +596,11 @@ implementation{
    		sock->transferSize = num;
    		sock->totalSent = 0;
 
-   		makepack(&sendPackage, TOS_NODE_ID, dest, MAX_TTL, PROTOCOL_TCP, currentSeq, SYN, MAX_PAYLOAD_SIZE);
+   		control.flag = SYN;
+   		control.destPort = destPort;
+   		control.srcPort = srcPort;
+
+   		makePack(&sendPackage, TOS_NODE_ID, dest, MAX_TTL, PROTOCOL_TCP, currentSeq, (uint8_t*)&control, sizeof(TCP_PAYLOAD));
    		smartPing(); //send a syn pack to establish connection
    		currentSeq++;
 
@@ -601,12 +682,12 @@ implementation{
 
    void socketBoot(){ //initializes all sockets to CLOSED durring Boot
    		uint8_t i = 0;
-   		socket_store_t* sock;
+   		socket_store_t sock;
    		uint16_t size = call sockets.maxSize();
+   		sock.state = CLOSED;
    		for(i = 0; i < size; i++)
    		{
-   			sock = call sockets.getAddr(i);
-   			sock.state = CLOSED;
+   			call sockets.pushfront(sock);
    		}
    }
 
@@ -619,6 +700,19 @@ implementation{
    			sock = call sockets.get(i);
    			if(sock.state == CLOSED){ //the first available socket index gets returned
    				return i;
+   			}
+   		}
+   }
+
+   socket_store_t* findSocket(uint8_t port){ //returns the index of a socket with the corresponding port ID
+   		uint8_t i = 0;
+   		socket_store_t* sock;
+   		uint16_t size = call sockets.maxSize(); //look through every socket
+   		for(i = 0; i < size; i++)
+   		{
+   			sock = call sockets.getAddr(i);
+   			if(sock->src == port){ //the first available socket index gets returned
+   				return sock;
    			}
    		}
    }

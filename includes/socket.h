@@ -22,17 +22,15 @@ enum socket_state{
     SYN_RCVD,
 };
 
-typedef nx_struct TCP_PAYLOAD{
-    uint8_t flag;
-    nx_socket_port_t destPort; //The port I'm attempting to connect to
-    nx_socket_port_t srcPort; //The port I'm connecting from
-}SYN_PAYLOAD;
-
-typedef
-
 
 typedef nx_uint8_t nx_socket_port_t;
 typedef uint8_t socket_port_t;
+
+typedef nx_struct TCP_PAYLOAD{
+    nx_uint8_t flag; //The type of TCP command
+    nx_socket_port_t destPort; //The port I'm attempting to connect to
+    nx_socket_port_t srcPort; //The port I'm connecting from
+}TCP_PAYLOAD;
 
 // socket_addr_t is a simplified version of an IP connection.
 typedef nx_struct socket_addr_t{

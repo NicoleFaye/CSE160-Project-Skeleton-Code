@@ -15,13 +15,6 @@ enum{
 	MAX_TTL = 10,
 	NEIGHBOR_LIFESPAN = 3, //the number of missed neighbor updates before assumed death
 	INFINITE_COST = 0,
-
-	//TCP RELATED VALUES
-	MAX_TRANSMISSION_SIZE = 64, //The number of packets that are transferable in a single TCP connection
-	SYN = 1, //Establish Connection
-	ACK = 2, //Acknowledge a recieved packet
-	FIN = 3  //Close Connection
-
 };
 
 
