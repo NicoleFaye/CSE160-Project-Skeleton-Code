@@ -51,18 +51,19 @@ typedef struct socket_store_t{
 
     // This is the sender portion.
     uint8_t sendBuff[SOCKET_BUFFER_SIZE];
-    uint8_t lastWritten;
-    uint8_t lastAck;
-    uint8_t lastSent;
-    uint8_t totalSent; //total number of bits sent
-    uint8_t transferSize; //total number of bits that are supposed to be sent
+    uint8_t lastWritten; //buff index
+    uint8_t lastAck; //pack seq
+    uint8_t lastAckIndex;
+    uint8_t lastSent; //buff index
+    uint8_t totalSent; //total number of bytes sent
+    uint8_t transferSize; //total number of bytes that are supposed to be sent
 
     // This is the receiver portion
     uint8_t rcvdBuff[SOCKET_BUFFER_SIZE];
-    uint8_t lastRead;
-    uint8_t lastRcvd;
-    uint8_t nextExpected;
-    uint8_t totalRcvd; //total number of bits recieved
+    uint8_t lastRead; //buff index
+    uint8_t lastRcvd; //buff index
+    uint8_t nextExpected; //pack seq
+    uint8_t totalRcvd; //total number of bytes recieved
 
     uint16_t RTT;
     uint8_t effectiveWindow;

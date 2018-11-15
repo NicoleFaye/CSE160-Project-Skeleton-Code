@@ -13,6 +13,11 @@ class TestSim:
     CMD_PING = 0
     CMD_NEIGHBOR_DUMP = 1
     CMD_ROUTE_DUMP=3
+    CMD_TEST_SERVER=5
+    CMD_TEST_CLIENT=4
+    CMD_CLOSE_CONNECTION=7
+
+
 
     # CHANNELS - see includes/channels.h
     COMMAND_CHANNEL="command";
@@ -129,7 +134,7 @@ class TestSim:
         self.sendCMD(self.CMD_TEST_SERVER, target, "{0}".format(chr(port)));
 
     def newClient(self, target, dest, srcPort, destPort, num): #Project 3
-        self.sendCMD(self.CMD_TEST_CLIENT, target, "{0}{1}{2}{3}{4}").format(chr(dest),chr(srcPort),chr(destPort),chr(num & 0xFF),chr((num >> 8) & 0xFF));
+        self.sendCMD(self.CMD_TEST_CLIENT, target, "{0}{1}{2}{3}{4}".format(chr(dest),chr(srcPort),chr(destPort),chr(num & 0xFF),chr((num >> 8) & 0xFF)));
 
     def clientClose(self, target, dest, srcPort, destPort): #Project 3
         self.sendCMD(self.CMD_CLOSE_CONNECTION, target, "{0}{1}{2}".format(chr(dest),chr(srcPort),chr(destPort)));
@@ -149,36 +154,17 @@ def main():
     s.addChannel(s.FLOODING_CHANNEL);	# initialize required channels
     s.addChannel(s.NEIGHBOR_CHANNEL);
     s.addChannel(s.ROUTING_CHANNEL);
+    s.addChannel(s.TRANSPORT_CHANNEL);
 
-
-    s.runTime(20);
-    s.ping(3, 6, "Flood me!");
 
     s.runTime(400); #Wait for NB + DVR table updates
 
-    s.ping(3, 5, "Wassup my guy?");
-    s.runTime(20);
-    s.routeDMP(3);
-    s.runTime(20);
-    
-    
-    s.moteOff(5);
-    s.runTime(150); #Wait for NB + DVR table updates
-
-    s.routeDMP(3);
-    s.runTime(20);
-    s.ping(3, 5, "You alive?");
-    s.runTime(20);
-
-    s.moteOn(5);
-    s.runTime(200); #Wait for NB + DVR table updates
-
-    s.routeDMP(3);
-    s.runTime(20);
-    s.ping(3, 5, "Welcome back!");
-    s.runTime(20);
-    s.ping(3, 5, "Y dont dis work wtf?");
-    s.runTime(100);
+    s.newServer(3, 20);
+    s.runTime(50);
+    s.newClient(5, 3, 10, 20, 100);
+    s.runTime(500);
+    s.clientClose(5, 3, 10, 20);
+    s.runTime(200);
 
 if __name__ == '__main__':
     main()
