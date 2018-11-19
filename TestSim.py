@@ -161,8 +161,8 @@ def main():
 
     s.newServer(3, 20);
     s.runTime(50);
-    s.newClient(5, 3, 10, 20, 100);
-    s.runTime(500);
+    s.newClient(5, 3, 10, 20, 101);
+    s.runTime(400);
     s.clientClose(5, 3, 10, 20);
     s.runTime(200);
 
