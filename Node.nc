@@ -760,6 +760,7 @@ implementation{
    	  	int i;
    	 	bool found;
    		route r;
+   		route cheapest;
 
    	  	if(call routeTable.isEmpty()){ //If there is no routing table
       		call Sender.send(sendPackage, AM_BROADCAST_ADDR); //Send the packet to all neighbors
@@ -772,14 +773,19 @@ implementation{
    	    	for(i = 0; i < rsize; i++){ //Search DVR table
         		r = call routeTable.get(i);
    	  			if(sendPackage.dest == r.dest){ //If matching route is found
-   	  				found == TRUE;
-   	  				if(r.cost == INFINITE_COST){ //If node is dead throw an error 
-   	  					dbg(GENERAL_CHANNEL, "Node %d: Disconnected - Packet Dropped\n", r.dest);
-   	  					return;
+   	  				if(found == FALSE && r.cost != 0){
+   	  					found = TRUE;
+   	  					cheapest = r;
    	  				}
-   	  				call Sender.send(sendPackage, r.next);
-   					return;
+   	  				else if(found == TRUE){
+   	  					if(r.cost < cheapest.cost && r.cost != 0)
+   	  						cheapest = r;
+   	  				}
    	  			}
+   	   		}
+   	   		if(found){ 
+   	   			call Sender.send(sendPackage, cheapest.next); //forward neatly
+   				return;
    	   		}
    	   		if(!found){
    	   			call Sender.send(sendPackage, AM_BROADCAST_ADDR); //Flood!
