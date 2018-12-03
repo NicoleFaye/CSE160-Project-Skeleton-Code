@@ -7,6 +7,8 @@ enum{
     ROOT_SOCKET_PORT = 255,
     SOCKET_BUFFER_SIZE = 128,
 
+    MAX_DATA_PAYLOAD_SIZE = PACKET_MAX_PAYLOAD_SIZE-2,
+
     //TCP RELATED VALUES
     //MAX_TRANSMISSION_SIZE = 64, //The number of packets that are transferable in a single TCP connection
     SYN = 1, //Establish Connection
@@ -34,8 +36,9 @@ typedef nx_struct TCP_PAYLOAD{
 }TCP_PAYLOAD;
 
 typedef nx_struct DATA_PAYLOAD{
+    nx_uint8_t port;
     nx_uint8_t size;
-    nx_uint8_t array[PACKET_MAX_PAYLOAD_SIZE-1];
+    nx_uint8_t array[MAX_DATA_PAYLOAD_SIZE];
 }DATA_PAYLOAD;
 
 // socket_addr_t is a simplified version of an IP connection.
@@ -72,6 +75,9 @@ typedef struct socket_store_t{
     uint8_t totalRcvd; //total number of bytes recieved
 
     uint16_t RTT;
+    uint16_t timeout;
+    uint8_t resentCount;
+
     uint8_t effectiveWindow;
 }socket_store_t;
 

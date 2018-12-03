@@ -220,8 +220,45 @@ implementation{
 
 
    event void TCPtimer.fired(){//PROJECT 3// use this in set up functions -> call TCPtimer.startPeriodic(30000);
-   		//this does nothing because TCP is hard
-   		
+   		uint8_t i;
+   		socket_store_t* sock;
+
+   		for(i = 0; i < call sockets.maxSize(); i++){
+   			sock = call sockets.getAddr(i);
+
+   			if(sock->state == ESTABLISHED){
+   				if(call TCPtimer.getNow() >= sock->timeout){ //if timed out
+   					if(sock->resentCount >= 2){
+   						sock->state = CLOSED;
+   						continue;
+   					}
+
+   					//RESEND TCP_DATA PACKET HERE
+
+   					sock->timeout = call TCPtimer.getNow() + (sock->RTT * 2);
+   					sock->resentCount++;
+
+   					continue;
+   				}
+
+
+   			}
+   			if(sock->state == LISTEN){
+   				if(call TCPtimer.getNow() >= sock->timeout){ //if timed out
+   					if(sock->resentCount >= 2){
+   						sock->state = CLOSED;
+   						continue;
+   					}
+
+   					//RESEND TCP_ACK PACKET HERE
+
+   					sock->timeout = call TCPtimer.getNow() + (sock->RTT * 2);
+   					sock->resentCount++;
+
+   					continue;
+   				}
+   			}
+   		}   		
    } 
 
 
@@ -374,6 +411,7 @@ implementation{
 						sock->state = SYN_RCVD; //Set node to response phase of handshake
 						sock->dest.port = control->srcPort;
 						sock->dest.addr = myMsg->src;
+						sock->RTT = call TCPtimer.getNow();
 
 						reply.flag = ACK;
 						reply.destPort = control->srcPort;
@@ -397,10 +435,13 @@ implementation{
 					if(sock->state == ESTABLISHED){ //Send new data packet until transmission is complete
 						uint8_t remainder = sock->transferSize - sock->totalSent;
 						DATA_PAYLOAD data;
+						
+						sock->lastAck = myMsg->seq;
+						data.port = control->srcPort;
 
-						dbg(TRANSPORT_CHANNEL, "Transfer Size: %d, Total Sent: %d, Remainder: %d\n", sock->transferSize, sock->totalSent, remainder);
+						//dbg(TRANSPORT_CHANNEL, "Transfer Size: %d, Total Sent: %d, Remainder: %d\n", sock->transferSize, sock->totalSent, remainder);
 
-						if(remainder <= PACKET_MAX_PAYLOAD_SIZE){ //send whatever is left
+						if(remainder <= MAX_DATA_PAYLOAD_SIZE){ //send whatever is left
 							data.size = remainder;
 							fillArray(data.array);
 
@@ -408,15 +449,15 @@ implementation{
 							smartPing();
 							currentSeq++;
 
-							dbg(TRANSPORT_CHANNEL, "TCPDATA PACK SENT 2\n");
+							//dbg(TRANSPORT_CHANNEL, "TCPDATA PACK SENT 2\n");
 
 							sock->totalSent += remainder;
 							sock->state = FINISHED;
 							return msg;
 						}
 						else{ //send it allllllllllll
-							uint8_t bytes[PACKET_MAX_PAYLOAD_SIZE-1];
-							data.size = PACKET_MAX_PAYLOAD_SIZE-1;
+							uint8_t bytes[MAX_DATA_PAYLOAD_SIZE];
+							data.size = MAX_DATA_PAYLOAD_SIZE;
 							fillArray(data.array);
 
 
@@ -424,15 +465,20 @@ implementation{
 							smartPing();
 							currentSeq++;
 
-							dbg(TRANSPORT_CHANNEL, "TCPDATA PACK SENT 1\n");
+							sock->timeout = call TCPtimer.getNow() + (sock->RTT * 2); //set new timeout
+							sock->resentCount = 0;
 
-							sock->totalSent += PACKET_MAX_PAYLOAD_SIZE-1;
+							//dbg(TRANSPORT_CHANNEL, "TCPDATA PACK SENT 1\n");
+
+							sock->totalSent += MAX_DATA_PAYLOAD_SIZE;
 							return msg;
 						}
 						return msg;
 					}
 
-					/*if(sock->state == FINISHED){ //last packet got picked up, say bye.
+					/*if(sock->state == FINISHED){ //Not Used
+						//Another function closes the connection so idk why this is even here
+						//could be useful in a future implimentation
 
 						reply.flag = FIN;
 						reply.srcPort = sock->src;
@@ -455,6 +501,9 @@ implementation{
 						sock->state = ESTABLISHED;
 						sock->lastAck = myMsg->seq;
 						sock->totalSent = 0;
+						sock->RTT = call TCPtimer.getNow() - sock->RTT;
+						dbg(TRANSPORT_CHANNEL, "RTT = %d\n", sock->RTT);
+
 						reply.flag = ACK;
 						reply.destPort = control->srcPort;
 						reply.srcPort = sock->src;
@@ -467,9 +516,11 @@ implementation{
 
 					if(sock->state == SYN_RCVD){
 
-						//
 						sock->state = LISTEN;
 						sock->totalRcvd = 0;
+						sock->RTT = call TCPtimer.getNow() - sock->RTT;
+						dbg(TRANSPORT_CHANNEL, "RTT = %d\n", sock->RTT);
+
 						reply.flag = ACK;
 						reply.destPort = control->srcPort;
 						reply.srcPort = sock->src;
@@ -516,15 +567,18 @@ implementation{
 			dbg(TRANSPORT_CHANNEL, "TCPDATA PACK RECIEVED\n");
 
 			if(myMsg->dest == TOS_NODE_ID){
-
+			
 				TCP_PAYLOAD reply;
 				DATA_PAYLOAD* data;
 				uint8_t i;
 				uint8_t bytes;
 				socket_store_t* sock;
-				sock = findSocketAddr(myMsg->src);
+				//sock = findSocketAddr(myMsg->src);
+
 
 				data = (DATA_PAYLOAD*)myMsg->payload;
+
+				sock = findSocket(data->port);
 
 				bytes = data->size;
 
@@ -543,6 +597,10 @@ implementation{
 
 				makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_TCP, myMsg->seq+1, (uint8_t*)&reply, sizeof(TCP_PAYLOAD));
 				smartPing();
+
+				sock->timeout = call TCPtimer.getNow() + (sock->RTT * 2); //set new timeout
+				sock->resentCount = 0;
+
 				return msg;
 			}
 			else{
@@ -663,12 +721,9 @@ implementation{
 
    		sock->src = port; //Assign the socket to the provided port value
 
-   		//call TCPtimer.startPeriodic(30000); //start TCP timer
+   		call TCPtimer.startPeriodic(1000); //start TCP timer
 
-
-
-
-
+   		sock->RTT = call TCPtimer.getNow();
    }
 
 
@@ -701,7 +756,10 @@ implementation{
 
    		sock->state = SYN_SENT; //set status to awaiting ACK
 
-   		//call TCPtimer.startPeriodic(10000); //start TCP timer
+   		call TCPtimer.startPeriodic(1000); //start TCP timer
+
+   		sock->RTT = call TCPtimer.getNow();
+
    } 
 
    event void CommandHandler.setAppServer(){}
@@ -838,7 +896,7 @@ implementation{
    		uint16_t size = call sockets.size(); //look through every socket
    		for(i = 0; i < size; i++)
    		{
-   			dbg(TRANSPORT_CHANNEL, "Looking at index %d\n", i);
+   			//dbg(TRANSPORT_CHANNEL, "Looking at index %d\n", i);
    			sock = call sockets.getAddr(i);
    			if(sock->dest.addr == addr){ //the first available socket index gets returned
    				return sock;
