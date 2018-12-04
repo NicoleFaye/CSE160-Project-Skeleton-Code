@@ -6,6 +6,8 @@
  * @date   2013/09/03
  *
  */
+#include <stdlib.h>
+#include <string.h>
 #include <Timer.h>
 #include "includes/command.h"
 #include "includes/packet.h"
@@ -62,7 +64,9 @@ implementation{
 
    void smartPing();
 
-   void append(char* s, char c);
+   uint8_t sizeOfString(char* str);
+
+   char*  append(char* s, char c, uint8_t len);
 
 	//LIST COMMANDS
    uint8_t arrSize(uint8_t* arr);
@@ -223,6 +227,7 @@ implementation{
    		uint8_t i;
    		socket_store_t* sock;
 
+   		/*
    		for(i = 0; i < call sockets.maxSize(); i++){
    			sock = call sockets.getAddr(i);
 
@@ -233,7 +238,8 @@ implementation{
    						continue;
    					}
 
-   					//RESEND TCP_DATA PACKET HERE
+   					makePack(&sendPackage, sock->lastPack.src, sock->lastPack.dest, sock->lastPack.TTL, sock->lastPack.protocol, sock->lastPack.seq, sock->lastPack.payload, PACKET_MAX_PAYLOAD_SIZE);
+   					smartPing();
 
    					sock->timeout = call TCPtimer.getNow() + (sock->RTT * 2);
    					sock->resentCount++;
@@ -250,7 +256,8 @@ implementation{
    						continue;
    					}
 
-   					//RESEND TCP_ACK PACKET HERE
+   					makePack(&sendPackage, sock->lastPack.src, sock->lastPack.dest, sock->lastPack.TTL, sock->lastPack.protocol, sock->lastPack.seq, sock->lastPack.payload, PACKET_MAX_PAYLOAD_SIZE);
+   					smartPing();
 
    					sock->timeout = call TCPtimer.getNow() + (sock->RTT * 2);
    					sock->resentCount++;
@@ -258,7 +265,7 @@ implementation{
    					continue;
    				}
    			}
-   		}   		
+   		}   */		
    } 
 
 
@@ -420,6 +427,8 @@ implementation{
 						makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_TCP, myMsg->seq+1, (uint8_t*)&reply, sizeof(TCP_PAYLOAD));
 						smartPing(); //Send ACK Packet
 
+						sock->lastPack = sendPackage;
+
 						dbg(TRANSPORT_CHANNEL, "ACK SENT TO CLIENT\n");
 
 						return msg;
@@ -429,7 +438,8 @@ implementation{
 
 				if(control->flag == ACK){ //ACC PACC BOIIII
 
-					dbg(TRANSPORT_CHANNEL, "ACK PACKET from %d\n", myMsg->src);
+					dbg(TRANSPORT_CHANNEL, "ACK PACKET from %d, port:%d\n", myMsg->src, sock->src);
+
 
 
 					if(sock->state == ESTABLISHED){ //Send new data packet until transmission is complete
@@ -441,38 +451,101 @@ implementation{
 
 						//dbg(TRANSPORT_CHANNEL, "Transfer Size: %d, Total Sent: %d, Remainder: %d\n", sock->transferSize, sock->totalSent, remainder);
 
-						if(remainder <= MAX_DATA_PAYLOAD_SIZE){ //send whatever is left
-							data.size = remainder;
-							fillArray(data.array);
+						if(sock->dat == READABLE){ //If the data to be sent contains a message
 
-							makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, (uint8_t*)&data, sizeof(DATA_PAYLOAD));
-							smartPing();
-							currentSeq++;
 
-							//dbg(TRANSPORT_CHANNEL, "TCPDATA PACK SENT 2\n");
+							if(remainder <= MAX_DATA_PAYLOAD_SIZE){ //send whatever is left
+								uint8_t i;
+								uint8_t j = 0;
+								data.size = remainder;
 
-							sock->totalSent += remainder;
-							sock->state = FINISHED;
+								for(i = sock->totalSent; i < sock->transferSize; i++){
+									data.array[j] = (uint8_t)sock->msg[i];
+									j++;
+								}
+								
+
+								makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, (uint8_t*)&data, PACKET_MAX_PAYLOAD_SIZE);
+								smartPing();
+								currentSeq++;
+
+								sock->lastPack = sendPackage;
+
+								dbg(TRANSPORT_CHANNEL, "TCPDATA PACK SENT 2\n");
+
+								sock->totalSent += remainder;
+								sock->state = FINISHED;
+								return msg;
+							}
+							else{ //send it allllllllllll
+								uint8_t i;
+								uint8_t j = 0;
+								uint8_t bytes[MAX_DATA_PAYLOAD_SIZE];
+								data.size = MAX_DATA_PAYLOAD_SIZE;
+
+								for(i = sock->totalSent; i < sock->totalSent+MAX_DATA_PAYLOAD_SIZE; i++){
+									data.array[j] = (uint8_t)sock->msg[i];
+									j++;
+								}
+
+
+								makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, (uint8_t*)&data, PACKET_MAX_PAYLOAD_SIZE);
+								smartPing();
+								currentSeq++;
+
+								sock->lastPack = sendPackage;
+
+								sock->timeout = call TCPtimer.getNow() + (sock->RTT * 2); //set new timeout
+								sock->resentCount = 0;
+
+								dbg(TRANSPORT_CHANNEL, "TCPDATA PACK SENT 1\n");
+
+								sock->totalSent += MAX_DATA_PAYLOAD_SIZE;
+								return msg;
+							}
 							return msg;
 						}
-						else{ //send it allllllllllll
-							uint8_t bytes[MAX_DATA_PAYLOAD_SIZE];
-							data.size = MAX_DATA_PAYLOAD_SIZE;
-							fillArray(data.array);
+						else if(sock->dat == ARBITRARY){ //If the data to be sent is arbitrary
+
+							if(remainder <= MAX_DATA_PAYLOAD_SIZE){ //send whatever is left
+								data.size = remainder;
+								fillArray(data.array);
+
+								makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, (uint8_t*)&data, PACKET_MAX_PAYLOAD_SIZE);
+								smartPing();
+								currentSeq++;
+
+								sock->lastPack = sendPackage;
+
+								//dbg(TRANSPORT_CHANNEL, "TCPDATA PACK SENT 2\n");
+
+								sock->totalSent += remainder;
+								sock->state = FINISHED;
+								return msg;
+							}
+							else{ //send it allllllllllll
+								uint8_t bytes[MAX_DATA_PAYLOAD_SIZE];
+								data.size = MAX_DATA_PAYLOAD_SIZE;
+								fillArray(data.array);
 
 
-							makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, (uint8_t*)&data, sizeof(DATA_PAYLOAD));
-							smartPing();
-							currentSeq++;
+								makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, (uint8_t*)&data, PACKET_MAX_PAYLOAD_SIZE);
+								smartPing();
+								currentSeq++;
 
-							sock->timeout = call TCPtimer.getNow() + (sock->RTT * 2); //set new timeout
-							sock->resentCount = 0;
+								sock->lastPack = sendPackage;
 
-							//dbg(TRANSPORT_CHANNEL, "TCPDATA PACK SENT 1\n");
+								sock->timeout = call TCPtimer.getNow() + (sock->RTT * 2); //set new timeout
+								sock->resentCount = 0;
 
-							sock->totalSent += MAX_DATA_PAYLOAD_SIZE;
-							return msg;
+								//dbg(TRANSPORT_CHANNEL, "TCPDATA PACK SENT 1\n");
+
+								sock->totalSent += MAX_DATA_PAYLOAD_SIZE;
+								return msg;
+							}
 						}
+
+						
 						return msg;
 					}
 
@@ -491,7 +564,6 @@ implementation{
 						sock->state = CLOSED;
 
 						return msg;
-
 					}*/
 
 					if(sock->state == SYN_SENT){
@@ -511,6 +583,8 @@ implementation{
 						makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_TCP, myMsg->seq+1, (uint8_t*)&reply, sizeof(TCP_PAYLOAD));
 						smartPing(); //Send ACK Packet
 
+						sock->lastPack = sendPackage;
+
 						return msg;
 					}
 
@@ -521,12 +595,16 @@ implementation{
 						sock->RTT = call TCPtimer.getNow() - sock->RTT;
 						dbg(TRANSPORT_CHANNEL, "RTT = %d\n", sock->RTT);
 
-						reply.flag = ACK;
-						reply.destPort = control->srcPort;
-						reply.srcPort = sock->src;
+						if(sock->dat == ARBITRARY){
+							reply.flag = ACK;
+							reply.destPort = control->srcPort;
+							reply.srcPort = sock->src;
 
-						makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_TCP, myMsg->seq+1, (uint8_t*)&reply, sizeof(TCP_PAYLOAD));
-						smartPing(); //Send ACK Packet
+							makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_TCP, myMsg->seq+1, (uint8_t*)&reply, sizeof(TCP_PAYLOAD));
+							smartPing(); //Send ACK Packet
+
+							sock->lastPack = sendPackage;
+						}
 
 						return msg;
 
@@ -571,10 +649,9 @@ implementation{
 				TCP_PAYLOAD reply;
 				DATA_PAYLOAD* data;
 				uint8_t i;
+				uint8_t size;
 				uint8_t bytes;
 				socket_store_t* sock;
-				//sock = findSocketAddr(myMsg->src);
-
 
 				data = (DATA_PAYLOAD*)myMsg->payload;
 
@@ -582,14 +659,29 @@ implementation{
 
 				bytes = data->size;
 
-				dbg(TRANSPORT_CHANNEL, "Reading data (Port: %d) PackSize: %d\n", sock->src, bytes);
+				if(sock->dat == READABLE){
+					dbg(TRANSPORT_CHANNEL, "Reading data (Port: %d) PackSize: %d\n", sock->src, bytes);
+					for(i = 0; i < bytes; i++){
+						sock->msg = append(sock->msg, (char)data->array[i], sock->totalRcvd);
+						sock->totalRcvd++;
+					}
 
-				for(i = 0; i < bytes; i++){
-					sock->totalRcvd++;
-					dbg(TRANSPORT_CHANNEL, "%d\n", sock->totalRcvd);
+					size = sizeOfString(sock->msg);
+
+					if(sock->msg[size-1] == '\n' && sock->msg[size-2] == '\r'){
+						dbg(TRANSPORT_CHANNEL, "Message from %d: %s", myMsg->src, sock->msg);
+						sock->msg = "";
+					}
+
 				}
-
-				dbg(TRANSPORT_CHANNEL, "Done.\n");
+				else if(sock->dat == ARBITRARY){
+					dbg(TRANSPORT_CHANNEL, "Reading data (Port: %d) PackSize: %d\n", sock->src, bytes);
+					for(i = 0; i < bytes; i++){
+						sock->totalRcvd++;
+						dbg(TRANSPORT_CHANNEL, "%d\n", sock->totalRcvd);
+					}
+					dbg(TRANSPORT_CHANNEL, "Done.\n");
+				}
 
 				reply.flag = ACK;
 				reply.srcPort = sock->src;
@@ -597,6 +689,8 @@ implementation{
 
 				makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_TCP, myMsg->seq+1, (uint8_t*)&reply, sizeof(TCP_PAYLOAD));
 				smartPing();
+
+				sock->lastPack = sendPackage;
 
 				sock->timeout = call TCPtimer.getNow() + (sock->RTT * 2); //set new timeout
 				sock->resentCount = 0;
@@ -720,10 +814,9 @@ implementation{
    		sock = call sockets.getAddr(sock_index); //Socket has been aquired
 
    		sock->src = port; //Assign the socket to the provided port value
+   		sock->dat = ARBITRARY; //Arbitrary Data
 
    		call TCPtimer.startPeriodic(1000); //start TCP timer
-
-   		sock->RTT = call TCPtimer.getNow();
    }
 
 
@@ -745,6 +838,7 @@ implementation{
    		sock->dest.addr = dest;
    		sock->transferSize = num;
    		sock->totalSent = 0;
+   		sock->dat = ARBITRARY; //Arbitrary Data
 
    		control.flag = SYN;
    		control.destPort = destPort;
@@ -753,6 +847,8 @@ implementation{
    		makePack(&sendPackage, TOS_NODE_ID, dest, MAX_TTL, PROTOCOL_TCP, currentSeq, (uint8_t*)&control, sizeof(TCP_PAYLOAD));
    		smartPing(); //send a syn pack to establish connection
    		currentSeq++;
+
+   		sock->lastPack = sendPackage;
 
    		sock->state = SYN_SENT; //set status to awaiting ACK
 
@@ -786,6 +882,135 @@ implementation{
    		sock->src = NULL;
 
    }
+
+
+
+   //PROJECT 4
+
+   event void CommandHandler.setServer(uint8_t port){
+   		socket_store_t* sock;
+   		uint8_t sock_index = get_available_socket(); //get the index of an available socket
+   		
+   		sock = call sockets.getAddr(sock_index); //Socket has been aquired
+
+   		sock->src = port; //Assign the socket to the provided port value
+   		sock->dat = READABLE;
+
+
+   		call TCPtimer.startPeriodic(1000); //start TCP timer
+
+   		sock->RTT = call TCPtimer.getNow();
+   }
+
+   event void CommandHandler.setClient(uint16_t dest, uint8_t srcPort, uint8_t destPort){
+   		uint8_t i;
+		socket_store_t* sock;
+		TCP_PAYLOAD control;
+   		uint8_t sock_index = get_available_socket(); //get the index of an available socket
+   		sock = call sockets.getAddr(sock_index); //Socket has been aquired
+
+   		sock->src = srcPort; //Assign the socket to the provided port value
+   		sock->dest.port = destPort;
+   		sock->dest.addr = dest;
+   		sock->dat = READABLE;
+   		sock->totalSent = 0;
+
+   		control.flag = SYN;
+   		control.destPort = destPort;
+   		control.srcPort = srcPort;
+
+   		makePack(&sendPackage, TOS_NODE_ID, dest, MAX_TTL, PROTOCOL_TCP, currentSeq, (uint8_t*)&control, sizeof(TCP_PAYLOAD));
+   		smartPing(); //send a syn pack to establish connection
+   		currentSeq++;
+
+   		sock->state = SYN_SENT; //set status to awaiting ACK
+
+   		call TCPtimer.startPeriodic(1000); //start TCP timer
+
+   		sock->RTT = call TCPtimer.getNow();
+
+   }
+
+   event void CommandHandler.sendMsg(uint8_t port, uint8_t* msg, uint8_t len){
+   		uint8_t i;
+   		uint8_t length = 0;
+   		char temp[128] = "";
+   		socket_store_t* sock;
+   		uint8_t remainder;
+		DATA_PAYLOAD data;
+
+		sock = findSocket(port);
+
+		i = 1;
+		while((char)msg[i] != '\n'){
+			temp[i-1] = (char)msg[i];
+			length++;
+			i++;
+		}
+
+		temp[i-1] = '\n';
+		length++;
+
+		sock->msg = temp;
+		sock->msgSize = length;
+
+   		sock->transferSize = sock->msgSize;
+   		sock->totalSent = 0;
+   		data.port = sock->dest.port;
+   		remainder = sock->transferSize - sock->totalSent;
+
+   		sock->state = ESTABLISHED;
+   		sock->dat = READABLE;
+
+		if(remainder <= MAX_DATA_PAYLOAD_SIZE){ //send whatever is left
+			uint8_t i;
+			uint8_t j = 0;
+			data.size = remainder;
+
+			for(i = sock->totalSent; i < sock->transferSize; i++){
+				data.array[j] = (uint8_t)sock->msg[i];
+				j++;
+			}
+
+			makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, (uint8_t*)&data, sizeof(DATA_PAYLOAD));
+			smartPing();
+			currentSeq++;
+
+			//dbg(TRANSPORT_CHANNEL, "TCPDATA PACK SENT 2\n");
+
+			sock->totalSent += remainder;
+			sock->state = FINISHED;
+			return;
+		}
+		else{ //send it allllllllllll
+			uint8_t i;
+			uint8_t j = 0;
+			uint8_t bytes[MAX_DATA_PAYLOAD_SIZE];
+			data.size = MAX_DATA_PAYLOAD_SIZE;
+
+			for(i = sock->totalSent; i < sock->totalSent+MAX_DATA_PAYLOAD_SIZE; i++){
+				data.array[j] = (uint8_t)sock->msg[i];
+				j++;
+			}
+
+
+			makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, (uint8_t*)&data, sizeof(DATA_PAYLOAD));
+			smartPing();
+			currentSeq++;
+
+			sock->timeout = call TCPtimer.getNow() + (sock->RTT * 2); //set new timeout
+			sock->resentCount = 0;
+
+			//dbg(TRANSPORT_CHANNEL, "TCPDATA PACK SENT 1\n");
+
+			sock->state = ESTABLISHED;
+
+			sock->totalSent += MAX_DATA_PAYLOAD_SIZE;
+			return;
+		}  		
+		
+   }
+
 
    void handleNeighborDeath(uint16_t index){
 
@@ -912,11 +1137,39 @@ implementation{
    }
 
 
-   void append(char* s, char c)
+   uint8_t sizeOfString(char* str){
+   		uint8_t offset = 0;
+   		uint8_t count = 0;
+
+   		while(*(str + offset) != '\0'){
+   			offset++;
+   			count++;
+   		}
+
+   		return count;
+   }
+
+
+   char* append(char* s, char c, uint8_t len)
 	{
-        int len = strlen(s);
-        s[len] = c;
-        s[len+1] = '\0';
+		/*
+		s[len] = c;
+		s[len+1] = '\0';
+		return s;
+		*/
+
+		uint8_t i;
+		char r[len+2];
+		
+		for(i = 0; i < len; i++){
+			r[i] = s[i];
+		}
+
+		r[len] = c;
+
+		r[len+1] = '\0';
+
+        return r;
 	}
 
    //LIST FUNCTIONS
@@ -944,405 +1197,3 @@ implementation{
 
 
 
-//SCRAPPED CODE FROM PROJECT 3
-/*
-
-//TCP TIMER IMPLIMENTATION (NOT USED)
-		uint8_t i;
-   		uint8_t j;
-   		uint8_t byteDiff;
-   		TCP_PAYLOAD control;
-   		socket_store_t* sock;
-   		uint16_t size = call sockets.maxSize();
-
-   		for(i = 0; i < size; i++){
-   			sock = call sockets.getAddr(i);
-     			if(sock->state == LISTEN){ //Read from the recieved buffer (SERVER)
-
-   				uint8_t byteCount = 0;
-
-   				if(sock->lastRead == sock->lastRcvd) //skip the read if there is no new data
-   					continue;
-
-   				dbg(TRANSPORT_CHANNEL, "(Port %d) Reading data: \n", sock->src);
-
-
-
-   				while(sock->lastRead != sock->lastRcvd){ //read the buffer until caught up to lastRcvd
-
-   					if(sock->lastRead == SOCKET_BUFFER_SIZE) //wrap around
-   						sock->lastRead = 0;
-
-   					//Calculate the number of bytes behind lastRcvd
-   					if(sock->lastRead < sock->lastRcvd)
-   						byteCount++; //byteDiff = sock->lastRcvd - sock->lastRead; 
-   					if(sock->lastRead > sock->lastRcvd)
-   						byteCount++; //byteDiff = (SOCKET_BUFFER_SIZE - sock->lastRead) + sock->lastRcvd;
-   					
-   					//"Read" the next byte
-   					//dbg(TRANSPORT_CHANNEL, "%d, \n", sock->totalRcvd - byteDiff);
-   					dbg(TRANSPORT_CHANNEL, "%d, \n", byteCount);
- 
-   					sock->lastRead++; //move to the next index
-   				}
-
-   				//dbg(TRANSPORT_CHANNEL, "(Port %d) Reading data: %c\n", sock->src, out);
-   				dbg(TRANSPORT_CHANNEL, "done\n");
-   			}
-
-   			if(sock->state == ESTABLISHED){ //Send new packet here.
-
-				bool done = FALSE;
-		   		uint8_t i;
-				uint8_t remainder;
-   				uint8_t payload[PACKET_MAX_PAYLOAD_SIZE];
-   				TCP_PAYLOAD control;
-
-				//ADJUST ACK WINDOW
-
-				//sock->lastAck = myMsg->seq-1;
-
-				if(sock->lastAckIndex + PACKET_MAX_PAYLOAD_SIZE > SOCKET_BUFFER_SIZE) // Adjust the ACK window
-					sock->lastAckIndex = sock->lastAckIndex + PACKET_MAX_PAYLOAD_SIZE - SOCKET_BUFFER_SIZE;
-				else
-					sock->lastAckIndex += PACKET_MAX_PAYLOAD_SIZE;
-
-
-				//WRITE UP TO ACK INDEX
-   				
-   				if(sock->lastWritten > sock->lastAckIndex){
-   					while(sock->lastWritten < SOCKET_BUFFER_SIZE){ //wrap around required
-   						sock->lastWritten++;
-   					}
-	 					sock->lastWritten = 0; //wrap around
-	  			}
-
-				while(sock->lastWritten < sock->lastAckIndex)
-  					sock->lastWritten++;
-
-
-  				//SEND A FULL PACKET
-
-				if(sock->lastSent > sock->lastWritten){ //wrap around is possible
-		   			if(PACKET_MAX_PAYLOAD_SIZE < (SOCKET_BUFFER_SIZE - sock->lastSent)){ //no wrap around
-		   				for(i = 0; i < PACKET_MAX_PAYLOAD_SIZE; i++){
-		   					sock->lastSent++;
-		   					sock->totalSent++;
-		   					payload[i] = sock->sendBuff[sock->lastSent]; //Fill the payload with buffer data
-		   					if(transferDone(sock)){ //Check if transfer limit is rached
-			  					makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, payload, i);
-								smartPing(); //Forward the data
-			   					//dbg(TRANSPORT_CHANNEL, "TCPDATA Packet Sent\n");
-			   					currentSeq++;
-
-			   					control.flag = FIN;
-			   					control.srcPort = sock->src;
-			   					control.destPort = sock->dest.port;
-
-			   					//makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCP, currentSeq, (uint8_t*)&control, sizeof(TCP_PAYLOAD));
-			   					//smartPing();
-			   					//currentSeq++;
-
-			  					sock->state = CLOSED;
-			   					done = TRUE;
-			   					break;
-		   					}
-		   				}
-						if(!done){
-		   					makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, payload, PACKET_MAX_PAYLOAD_SIZE);
-		   					smartPing(); //Forward the data
-		   					//dbg(TRANSPORT_CHANNEL, "TCPDATA Packet Sent\n");
-		   					currentSeq++;
-		   				}
-		   				continue; //finish the loop itteration for this socket
-		   			}
-		   			else if(PACKET_MAX_PAYLOAD_SIZE >= (SOCKET_BUFFER_SIZE - sock->lastSent)){//wrap around
-		   				remainder = SOCKET_BUFFER_SIZE - sock->lastSent;
-		   				for(i = 0; i < remainder; i++){
-		   					sock->lastSent++;
-		   					sock->totalSent++;
-		   					payload[i] = sock->sendBuff[sock->lastSent]; //Fill the payload with buffer data
-		   					if(transferDone(sock)){ //Check if transfer limit is rached
-
-					   			makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, payload, i);
-								smartPing(); //Forward the data
-					   			//dbg(TRANSPORT_CHANNEL, "TCPDATA Packet Sent\n");
-					   			currentSeq++;
-
-					   			control.flag = FIN;
-					   			control.srcPort = sock->src;
-					   			control.destPort = sock->dest.port;
-
-					   			//makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCP, currentSeq, (uint8_t*)&control, sizeof(TCP_PAYLOAD));
-					   			//smartPing();
-					   			//currentSeq++;
-
-					   			sock->state = CLOSED;
-					   			done = TRUE;
-					   			break;
-		   					}
-		   				}
-		   				if(done){
-		   					continue;
-		   				}
-		   				sock->lastSent = 0;
-		   				if(PACKET_MAX_PAYLOAD_SIZE - i <= sock->lastWritten){ //There is enough data to fill payload
-		   					for(i = i; i < PACKET_MAX_PAYLOAD_SIZE; i++){
-		   						payload[i] = sock->sendBuff[sock->lastSent];
-		   						sock->lastSent++;
-		   						sock->totalSent++;
-		   						if(transferDone(sock)){ //Check if transfer limit is rached
-
-						   			makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, payload, i);
-						   			smartPing(); //Forward the data
-						   			//dbg(TRANSPORT_CHANNEL, "TCPDATA Packet Sent\n");
-						   			currentSeq++;
-
-						   			control.flag = FIN;
-						   			control.srcPort = sock->src;
-						   			control.destPort = sock->dest.port;
-
-						   			//makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCP, currentSeq, (uint8_t*)&control, sizeof(TCP_PAYLOAD));
-						   			//smartPing();
-						   			//currentSeq++;
-
-						   			sock->state = CLOSED;
-						   			done = TRUE;
-						   			break;
-			   					}
-		   					}
-		   					if(!done){
-			   					sock->lastSent--; //re-adjust the index
-			   					makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, payload, PACKET_MAX_PAYLOAD_SIZE);
-			   					smartPing(); //Forward the data
-			   					//dbg(TRANSPORT_CHANNEL, "TCPDATA Packet Sent\n");
-			   					currentSeq++;
-		   					}
-		   					continue; //finish the loop itteration for this socket
-		   				}
-		   				else{ //There is not enough data to fill the payload
-		   					while(sock->lastSent <= sock->lastWritten){
-		   						payload[i] = sock->sendBuff[sock->lastSent];
-		   						sock->lastSent++;
-		   						sock->totalSent++;
-		   						i++;
-		   						if(transferDone(sock)){ //Check if transfer limit is rached
-
-				 					makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, payload, i);
-						   			smartPing(); //Forward the data
-						   			dbg(TRANSPORT_CHANNEL, "TCPDATA Packet Sent\n");
-						   			currentSeq++;
-
-						   			control.flag = FIN;
-						   			control.srcPort = sock->src;
-						   			control.destPort = sock->dest.port;
-
-						   			//makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCP, currentSeq, (uint8_t*)&control, sizeof(TCP_PAYLOAD));
-						   			//smartPing();
-						   			//currentSeq++;
-
-						   			sock->state = CLOSED;
-						   			done = TRUE;
-						   			break;
-			   					}
-		   					}
-		   					if(!done){
-			   					sock->lastSent--; //re-adjust the index
-			   					makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, payload, arrSize(payload));
-			   					//dbg(TRANSPORT_CHANNEL, "TCPDATA Packet Sent\n");
-			   					smartPing(); //Forward the data
-			   					currentSeq++;
-		   					}
-		   					continue; //finish the loop itteration for this socket
-		   				}
-		   			}
-		   		}
-		   		else{ //no wrap around
-		   			if(PACKET_MAX_PAYLOAD_SIZE > (sock->lastWritten - sock->lastSent)){ //not enough data available
-		   				for(i = 0; i < sock->lastWritten - sock->lastSent; i++){
-		   					sock->lastSent++;
-		   					sock->totalSent++;
-		   					payload[i] = sock->sendBuff[sock->lastSent]; //Fill the payload with buffer data
-		   					if(transferDone(sock)){ //Check if transfer limit is rached
-
-					   			makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, payload, i);
-								smartPing(); //Forward the data
-					   			//dbg(TRANSPORT_CHANNEL, "TCPDATA Packet Sent\n");
-					   			currentSeq++;
-
-					  			control.flag = FIN;
-								control.srcPort = sock->src;
-					   			control.destPort = sock->dest.port;
-
-					   			//makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCP, currentSeq, (uint8_t*)&control, sizeof(TCP_PAYLOAD));
-					   			//smartPing();
-					   			//currentSeq++;
-
-					   			sock->state = CLOSED;
-					   			done = TRUE;
-					   			break;
-		   					}
-		   				}
-		   				if(!done){
-		   					makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, payload, PACKET_MAX_PAYLOAD_SIZE);
-		   					smartPing(); //Forward the data
-		   					//dbg(TRANSPORT_CHANNEL, "TCPDATA Packet Sent\n");
-		   					currentSeq++;
-		   				}
-		   				continue; //finish the loop itteration for this socket
-		   			}
-		   			else{
-		   				for(i = 0; i < PACKET_MAX_PAYLOAD_SIZE; i++){
-		   					sock->lastSent++;
-		   					sock->totalSent++;
-		   					payload[i] = sock->sendBuff[sock->lastSent]; //Fill the payload with buffer data
-		   					if(transferDone(sock)){ //Check if transfer limit is rached
-
-					   			makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, payload, i);
-					   			smartPing(); //Forward the data
-					   			dbg(TRANSPORT_CHANNEL, "TCPDATA Packet Sent\n");
-					   			currentSeq++;
-
-					   			control.flag = FIN;
-					   			control.srcPort = sock->src;
-					   			control.destPort = sock->dest.port;
-
-					   			//makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCP, currentSeq, (uint8_t*)&control, sizeof(TCP_PAYLOAD));
-					   			//smartPing();
-					   			//currentSeq++;
-
-					   			sock->state = CLOSED;
-					   			done = TRUE;
-					   			break;
-		   					}
-		   				}
-		   				if(!done){
-		   					makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCPDATA, currentSeq, payload, PACKET_MAX_PAYLOAD_SIZE);
-		   					smartPing(); //Forward the data
-		   					//dbg(TRANSPORT_CHANNEL, "TCPDATA Packet Sent\n");
-		   					currentSeq++;
-		   				}
-		   				continue; //finish the loop itteration for this socket
-		   			}
-		   		}
-		   	}
-
-   			if(sock->state == CLOSED){
-
-   				control.flag = FIN;
-   				control.srcPort = sock->src;
-   				control.destPort = sock->dest.port;
-
-   				makePack(&sendPackage, TOS_NODE_ID, sock->dest.addr, MAX_TTL, PROTOCOL_TCP, currentSeq, (uint8_t*)&control, sizeof(TCP_PAYLOAD));
-				smartPing();
-				currentSeq++;
-
-   			}
-
-
-   		}
-
-
-
-
-
-   		//IMPLIMENTAATION FOR HANDLING TCP DATA PACKETS (NOT USED)
-
-
-   		if(myMsg->protocol == PROTOCOL_TCPDATA){ //used for actual data transmission on a TCP connection
-
-			if(myMsg->dest == TOS_NODE_ID){
-				uint8_t i;
-				TCP_PAYLOAD ack;
-				uint8_t size = arrSize(myMsg->payload);
-				socket_store_t* sock = findSocketAddr(myMsg->src);
-
-				dbg(TRANSPORT_CHANNEL, "Data arrived from %d\n", myMsg->src);
-
-				sock->nextExpected = myMsg->seq+1; //update seq for ACK packs
-
-
-				if(sock->state == LISTEN){ //Read from the recieved buffer (SERVER)
-
-	   				uint8_t byteCount = 0;
-
-	   				if(sock->lastRead == sock->lastRcvd) //skip the read if there is no new data
-	   					continue;
-
-	   				dbg(TRANSPORT_CHANNEL, "(Port %d) Reading data: \n", sock->src);
-
-
-
-	   				while(sock->lastRead != sock->lastRcvd){ //read the buffer until caught up to lastRcvd
-
-	   					if(sock->lastRead == SOCKET_BUFFER_SIZE) //wrap around
-	   						sock->lastRead = 0;
-
-	   					//Calculate the number of bytes behind lastRcvd
-	   					if(sock->lastRead < sock->lastRcvd)
-	   						byteCount++; //byteDiff = sock->lastRcvd - sock->lastRead; 
-	   					if(sock->lastRead > sock->lastRcvd)
-	   						byteCount++; //byteDiff = (SOCKET_BUFFER_SIZE - sock->lastRead) + sock->lastRcvd;
-	   					
-	   					//"Read" the next byte
-	   					//dbg(TRANSPORT_CHANNEL, "%d, \n", sock->totalRcvd - byteDiff);
-	   					dbg(TRANSPORT_CHANNEL, "%d, \n", sock->totalRcvd);
-
-	   					sock->lastRead++; //move to the next index
-	   				}
-
-	   				//dbg(TRANSPORT_CHANNEL, "(Port %d) Reading data: %c\n", sock->src, out);
-	   				dbg(TRANSPORT_CHANNEL, "done\n");
-	   			}
-
-
-				for(i = 0; i < size; i++){ //write all data to recieved buffer
-
-					if(sock->lastRcvd == SOCKET_BUFFER_SIZE){ //wrap around if lastRcvd has reached buffer size
-						sock->rcvdBuff[0] = myMsg->payload[i]; 
-						sock->lastRcvd = 0;
-						sock->totalRcvd ++;
-						continue;
-					}
-
-					sock->lastRcvd++;
-					sock->rcvdBuff[sock->lastRcvd] = myMsg->payload[i];
-					sock->totalRcvd++;
-				}
-
-				dbg(TRANSPORT_CHANNEL, "(Port %d) Reading data: \n", sock->src);
-
-				for(i = 0; i < size; i++){
-					sock->totalRcvd++;
-					dbg(TRANSPORT_CHANNEL, "%d, \n", sock->totalRcvd);
-				}
-
-				dbg(TRANSPORT_CHANNEL, "done\n");
-
-				//Send ACK pack to client
-
-				ack.flag = ACK;
-				ack.srcPort = sock->src;
-				ack.destPort = sock->dest.port;
-
-				makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_TCP, sock->nextExpected, (uint8_t*)&ack, sizeof(TCP_PAYLOAD));
-				smartPing();
-
-				return msg;
-
-			}
-			else{
-				makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, PROTOCOL_TCPDATA, myMsg->seq, myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
-				smartPing();
-				return msg;
-			}
-		}
-
-
-
-
-
-
-
-
-*/

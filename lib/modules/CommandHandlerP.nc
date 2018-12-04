@@ -69,6 +69,9 @@ implementation{
                 signal CommandHandler.printRouteTable();
                 break;
 
+
+            //PROJECT 3 COMMANDS
+
             case CMD_TEST_CLIENT:
                 dbg(COMMAND_CHANNEL, "Command Type: Client\n");
                 num = buff[3];
@@ -84,6 +87,24 @@ implementation{
             case CMD_CLOSE_CONNECTION:
                 dbg(COMMAND_CHANNEL, "Command Type: Close Connection\n");
                 signal CommandHandler.closeConnection(buff[0], buff[1], buff[2]);
+                break;
+
+
+            //PROJECT 4 COMMANDS
+
+            case CMD_SET_SERVER:
+                dbg(COMMAND_CHANNEL, "Command Type: Message Server\n");
+                signal CommandHandler.setServer(buff[0]);
+                break;
+
+            case CMD_SET_CLIENT:
+                dbg(COMMAND_CHANNEL, "Command Type: Message Client\n");
+                signal CommandHandler.setClient(buff[0], buff[1], buff[2]);
+                break;
+
+            case CMD_SEND_MSG:
+                dbg(COMMAND_CHANNEL, "Command Type: Send Message\n");
+                signal CommandHandler.sendMsg(buff[0], &buff[1], buff[2]);
                 break;
 
             default:

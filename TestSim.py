@@ -16,6 +16,9 @@ class TestSim:
     CMD_TEST_SERVER=5
     CMD_TEST_CLIENT=4
     CMD_CLOSE_CONNECTION=7
+    CMD_SET_SERVER=10
+    CMD_SET_CLIENT=11
+    CMD_SEND_MSG=12
 
 
 
@@ -130,6 +133,8 @@ class TestSim:
     def routeDMP(self, destination):
         self.sendCMD(self.CMD_ROUTE_DUMP, destination, "routing command");
 
+
+
     def newServer(self, target, port): #Project 3
         self.sendCMD(self.CMD_TEST_SERVER, target, "{0}".format(chr(port)));
 
@@ -138,6 +143,19 @@ class TestSim:
 
     def clientClose(self, target, dest, srcPort, destPort): #Project 3
         self.sendCMD(self.CMD_CLOSE_CONNECTION, target, "{0}{1}{2}".format(chr(dest),chr(srcPort),chr(destPort)));
+
+
+
+    def setServer(self, target, port): #Project 4
+        self.sendCMD(self.CMD_SET_SERVER, target, "{0}".format(chr(port)));
+
+    def setClient(self, target, dest, srcPort, destPort): #Project 4
+        self.sendCMD(self.CMD_TEST_CLIENT, target, "{0}{1}{2}".format(chr(dest),chr(srcPort),chr(destPort)));
+
+    def sendChat(self, target, port, msg): #Project 4
+        self.sendCMD(self.CMD_SEND_MSG, target, "{0}{1}{2}".format(chr(port),chr(len(msg)), msg));
+
+
 
     def addChannel(self, channelName, out=sys.stdout):
         print 'Adding Channel', channelName;
@@ -159,9 +177,11 @@ def main():
 
     s.runTime(400); #Wait for NB + DVR table updates
 
-    s.newServer(3, 20);
+    s.setServer(3, 20);
     s.runTime(50);
-    s.newClient(5, 3, 10, 20, 57);
+    s.setClient(5, 3, 10, 20);
+    s.runTime(10);
+    s.sendChat(5, 10, "Hello World! UwU\r\n");
     s.runTime(150);
     s.clientClose(5, 3, 10, 20);
     s.runTime(50);

@@ -10,4 +10,7 @@ interface CommandHandler{
    event void setAppServer();
    event void setAppClient();
    event void closeConnection(uint16_t dest, uint8_t srcPort, uint8_t destPort);
+   event void setServer(uint8_t port);
+   event void setClient(uint16_t dest, uint8_t srcPort, uint8_t destPort);
+   event void sendMsg(uint8_t port, uint8_t* msg, uint8_t length);
 }

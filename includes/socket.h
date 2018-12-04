@@ -1,6 +1,8 @@
 #ifndef __SOCKET_H__
 #define __SOCKET_H__
 
+#include "packet.h"
+
 enum{
     MAX_NUM_OF_SOCKETS = 10,
     ROOT_SOCKET_ADDR = 255,
@@ -23,6 +25,11 @@ enum socket_state{
     FINISHED,
     SYN_SENT,
     SYN_RCVD,
+};
+
+enum data_worth{
+    READABLE,
+    ARBITRARY
 };
 
 
@@ -59,11 +66,17 @@ typedef struct socket_store_t{
     socket_addr_t dest;
 
     // This is the sender portion.
+    enum data_worth dat;
+    char* msg;
+    uint8_t msgSize;
+    pack lastPack;
+
     uint8_t sendBuff[SOCKET_BUFFER_SIZE];
     uint8_t lastWritten; //buff index
     uint8_t lastAck; //pack seq
     uint8_t lastAckIndex;
-    uint8_t lastSent; //buff index
+    uint8_t lastSent; //last pack sent
+
     uint8_t totalSent; //total number of bytes sent
     uint8_t transferSize; //total number of bytes that are supposed to be sent
 
